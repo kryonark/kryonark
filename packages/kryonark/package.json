@@ -12,7 +12,7 @@
   "scripts": { "test": "node --test" },
   "keywords": ["kryonark", "robinhood-chain", "omnichain", "collateral", "tokenized-stocks", "rwa", "defi", "ai-agent", "liquidation", "health-factor"],
   "homepage": "https://kryonark.xyz",
-  "repository": { "type": "git", "url": "git+https://github.com/burningheadstd-coder/kryonark.git", "directory": "packages/kryonark" },
-  "bugs": { "url": "https://github.com/burningheadstd-coder/kryonark/issues" },
+  "repository": { "type": "git", "url": "git+https://github.com/kryonark/kryonark.git", "directory": "packages/kryonark" },
+  "bugs": { "url": "https://github.com/kryonark/kryonark/issues" },
   "license": "MIT"
 }
