@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kryonark · Trade stocks from any chain</title>
+<meta name="description" content="Omnichain collateral for tokenized stocks on Robinhood Chain. Lock SOL, BTC or USDC where it lives, open stock positions in one signature, and let an AI agent guard your collateral 24/7.">
+<meta name="theme-color" content="#060910">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Kryonark · Trade stocks from any chain">
+<meta property="og:description" content="Lock SOL, BTC or USDC where it lives and open tokenized stock positions on Robinhood Chain in one signature, guarded by an AI agent 24/7.">
+<link rel="canonical" href="https://kryonark.xyz/">
+<meta property="og:url" content="https://kryonark.xyz/">
+<meta property="og:site_name" content="Kryonark">
+<meta property="og:image" content="https://kryonark.xyz/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kryonark.xyz/assets/og.jpg">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/brand/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/brand/favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="scene" aria-hidden="true">
+    <img id="cube-still" class="cube-still" src="assets/cube.webp" srcset="assets/cube.webp 1x, assets/cube@2x.webp 2x" alt="">
+    <canvas id="cube3d" class="cube3d" width="1440" height="798"></canvas>
+  </div>
+
+  <nav class="nav wrap">
+    <a class="brand" href="#"><img src="assets/brand/logo-128.png" srcset="assets/brand/logo-64.png 1x, assets/brand/logo-128.png 2x" alt="" width="34" height="34">Kryonark</a>
+    <ul class="links">
+      <li><a class="on" href="#">Collateral</a></li>
+      <li><a href="#engine">Positions</a></li>
+      <li><a href="#agent">AI agent</a></li>
+      <li><a href="#">Security</a></li>
+      <li><a href="#">Docs</a></li>
+    </ul>
+    <div class="nav-r">
+      <a class="btn ghost" href="#">Connect wallet</a>
+      <a class="btn fire" href="#engine">Launch app</a>
+    </div>
+  </nav>
+
+  <div class="attest"><span class="dot"></span>Agent online · health factor <span id="hf-pill">1.84</span></div>
+
+  <div class="hero-body wrap">
+    <h1>Trade stocks<br><span>from any chain.</span></h1>
+    <div class="hero-side">
+      <p>Lock SOL, BTC or USDC where it lives and open tokenized stock positions on Robinhood Chain in one signature. No manual bridging, and an AI agent guards it 24/7.</p>
+      <div class="hero-cta">
+        <a class="btn soft" href="#engine">Open a position <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5v9M2.5 7 6 10.5 9.5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="btn ghost" href="#agent">How it works</a>
+      </div>
+      <div class="ca-chip" id="ca-chip" hidden><span class="ca-tick" id="ca-sym">$KRYO</span><code id="ca-addr"></code><button type="button" id="ca-copy">Copy</button><a id="ca-buy" target="_blank" rel="noopener">Buy on Pons</a></div>
+    </div>
+  </div>
+
+  <div class="stats wrap">
+    <div class="has-chains"><b>8 chains</b><span>Collateral sources</span>
+      <i class="chains" aria-label="Solana, Bitcoin, Ethereum, Base, Arbitrum, Optimism, Polygon, Robinhood Chain">
+        <img src="assets/logos/solana.svg" alt=""><img src="assets/logos/bitcoin.svg" alt=""><img src="assets/logos/ethereum.svg" alt=""><img src="assets/logos/base.svg" alt=""><img src="assets/logos/arbitrum.svg" alt=""><img src="assets/logos/optimism.svg" alt=""><img src="assets/logos/polygon.svg" alt=""><img src="assets/logos/robinhood.svg" alt="">
+      </i></div>
+    <div><b>1 signature</b><span>Per cross-chain position</span></div>
+    <div><b>~100 ms</b><span>Robinhood Chain blocks</span></div>
+    <div><b>24 / 7</b><span>Agent risk monitoring</span></div>
+  </div>
+</header>
+
+<!-- ============ BUILT ON ============ -->
+<div class="trusted-band"><section class="trusted wrap">
+  <span class="eyebrow">Built on</span>
+  <ul>
+    <li><img src="assets/logos/robinhood.svg" alt="" width="24" height="24">Robinhood Chain</li>
+    <li><img src="assets/logos/arbitrum.svg" alt="" width="24" height="24">Arbitrum</li>
+    <li><img src="assets/logos/ethereum.svg" alt="" width="24" height="24">Ethereum</li>
+    <li><img src="assets/logos/chainlink.svg" alt="" width="24" height="24">Chainlink</li>
+    <li><img src="assets/logos/across.svg" alt="" width="24" height="24">Across</li>
+  </ul>
+</section></div>
+
+<!-- ============ ENGINE ============ -->
+<section class="proof wrap" id="engine">
+  <div class="proof-l" id="agent">
+    <span class="eyebrow">Omnichain collateral</span>
+    <h2>Guarded<br><span>every block.</span></h2>
+    <p>Your collateral stays on its home chain. The agent reads Chainlink prices for both sides and tops up any position drifting toward liquidation, using only funds you allowed.</p>
+    <div class="mini">
+      <div class="mini-row"><small>Latest health check</small><small>Next check in</small></div>
+      <div class="mini-row mono big"><span id="chk-time">14:00:03 UTC</span><span id="chk-next">0.9 s</span></div>
+    </div>
+    <div class="mini auditor">
+      <div><small>Agent session key · ERC-7715</small><b>Top-up only · 30 days</b></div>
+      <a class="btn ghost sm" href="#">Revoke</a>
+    </div>
+  </div>
+
+  <div class="proof-r">
+    <article class="panel reserves">
+      <header>
+        <div><h3>Collateral vs. stock positions</h3><small id="px-note">Example portfolio · live prices</small></div>
+        <div class="ratio"><b id="hf">1.84</b><span class="ok"><i></i>Safe · liquidation at 1.00</span></div>
+      </header>
+      <div class="legend"><span><i class="held"></i>Collateral, home chain</span><span><i class="owed"></i>Position on Robinhood Chain</span></div>
+      <ul class="assets" id="assets"></ul>
+    </article>
+
+    <div class="pair">
+      <article class="panel att">
+        <header><h3>Agent top-ups, last 24 h</h3><small class="mono">1 / 24 hours</small></header>
+        <div class="bars" id="bars"></div>
+      </article>
+      <article class="panel cold">
+        <header><h3>Locked vs. buffer</h3><small class="mono">by value</small></header>
+        <div class="split"><i style="width:84.6%"></i><i></i></div>
+        <div class="split-l mono"><span>84.6% <em>locked</em></span><span>15.4% <em>buffer</em></span></div>
+      </article>
+    </div>
+
+    <article class="panel verify">
+      <form id="verify" autocomplete="off">
+        <label class="field"><span>Intent</span><input id="cid" value="Protect NVDA if SOL drops 10%" spellcheck="false" aria-label="Intent for the agent"></label>
+        <button class="btn fire" type="submit">Send to agent</button>
+      </form>
+      <div class="result" id="result" role="status">
+        <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 6.3 2.3 2.2 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <p id="result-t">If <b>SOL &lt; $132.40</b>, move 6,100 USDC from Base to your NVDA position via <code>LayerZero</code>, signed by session key 0x4c1e…a92b.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<script type="importmap">{ "imports": { "three": "./assets/vendor/three/three.module.min.js", "three/addons/": "./assets/vendor/three/addons/" } }</script>
+<script src="assets/app.js" defer></script>
+<script type="module" src="assets/cube3d.js"></script>
+</body>
+</html>
