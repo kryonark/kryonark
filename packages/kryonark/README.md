@@ -59,4 +59,4 @@ Intents it understands: `Protect <STOCK> if <ASSET> drops <N>%` (also `Lindungi 
 
 This is the engine's maths and intent layer. It does not hold keys, sign or send transactions. The book is an example; prices are live.
 
-MIT · [kryonark.xyz](https://kryonark.xyz) · [GitHub](https://github.com/Dhkrmynti/kryonark)
+MIT · [kryonark.xyz](https://kryonark.xyz) · [GitHub](https://github.com/burningheadstd-coder/kryonark)
