@@ -393,3 +393,24 @@ button.btn { font: inherit; font-size: 13.5px; font-weight: 500; }
 .page-hero { overflow: visible; z-index: 5; }
 .soc { padding: 0; font: inherit; cursor: pointer; }
 .soc.soon { cursor: help; }
+
+/* ---------- compact hero (desktop): the whole plate, cube and type at 0.84, so hero + stats fit one laptop screen ---------- */
+@media (min-width: 961px) {
+  .hero { height: 780px; }
+  .scene { left: calc(50% - 586px); transform: scale(0.84); }
+  .attest { top: 104px; left: calc(50% + 142px); }
+  .hero-body { padding-top: 398px; height: 610px; }
+  .hero h1 { font-size: 94px; line-height: 92px; }
+  .hero-side { margin-top: 30px; }
+  .hero-side p { margin-bottom: 22px; }
+  .stats { height: 88px; }
+  .stats > div { padding: 21px 26px 0; }
+  .stats b { font-size: 24px; }
+}
+@media (min-width: 961px) and (max-width: 1200px) {
+  .hero { height: auto; padding-bottom: 64px; }
+  .hero h1 { font-size: 80px; line-height: 80px; }
+  .hero-body { padding-top: 410px; height: auto; }
+  .stats { height: auto; margin-top: 28px; }
+  .stats > div { padding-bottom: 18px; }
+}
