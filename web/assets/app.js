@@ -221,7 +221,7 @@ async function status() {
   $("#agent-state").textContent = online ? "Agent online" : "Agent offline";
   $("#agent-dot").style.background = online ? "" : "#ffb14a";
   $("#agent-dot").style.boxShadow = online ? "" : "0 0 6px rgba(255,177,74,.8)";
-  $("#agent-guarded").textContent = s ? `${s.guarded} account${s.guarded === 1 ? "" : "s"} guarded` : "not deployed yet";
+  $("#agent-guarded").textContent = !s ? "not reachable" : s.configured === false ? "waiting for the vault" : `${s.guarded} account${s.guarded === 1 ? "" : "s"} guarded`;
   lastCheck = online ? s.lastCheck : 0; every = s ? s.checkEveryMs : 0;
   const now = Date.now(), hours = Array.from({ length: 24 }, () => []);
   for (const a of (s && s.actions) || []) { const k = Math.floor((now - a.at) / 3600e3); if (k >= 0 && k < 24) hours[23 - k].push(a); }
@@ -231,8 +231,8 @@ async function status() {
     return `<i class="${h.length ? "now" : ""}" style="height:${h.length ? 25 + (h.length / max) * 75 : 8}%" title="${23 - i}h ago · ${t}"></i>`;
   }).join("");
   const n = hours.reduce((a, h) => a + h.length, 0);
-  $("#st-checks").textContent = s ? Number(s.checks24h).toLocaleString("en-US") : "offline";
-  $("#tops-n").textContent = s ? `${n} top-up${n === 1 ? "" : "s"} · ${Number(s.checks24h).toLocaleString("en-US")} checks` : "agent offline";
+  $("#st-checks").textContent = s && s.configured !== false ? Number(s.checks24h || 0).toLocaleString("en-US") : "–";
+  $("#tops-n").textContent = s && s.configured !== false ? `${n} top-up${n === 1 ? "" : "s"} · ${Number(s.checks24h || 0).toLocaleString("en-US")} checks` : "waiting for the vault";
   if (ME && S.ok) render();
 }
 setInterval(() => {
