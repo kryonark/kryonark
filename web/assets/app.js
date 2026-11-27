@@ -104,3 +104,23 @@ prices().then(() => ($("#result-t").innerHTML = plan($("#cid").value).html));
     box.hidden = false;
   } catch {}
 })();
+
+// ---------- session key: revoke / re-enable the agent (preview: changes this page only, no transaction) ----------
+(() => {
+  const btn = $("#sk-toggle"); if (!btn) return;
+  let paused = false;
+  btn.addEventListener("click", () => {
+    paused = !paused;
+    btn.textContent = paused ? "Re-enable" : "Revoke";
+    btn.setAttribute("aria-pressed", String(paused));
+    $("#sk-state").textContent = paused ? "Revoked · agent paused" : "Top-up only · 30 days";
+    $("#agent-state").textContent = paused ? "Agent paused" : "Agent online";
+    $("#agent-dot").style.background = paused ? "#ffb14a" : "";
+    $("#agent-dot").style.boxShadow = paused ? "0 0 6px rgba(255,177,74,.8)" : "";
+    const r = $("#result"), tx = $("#result-t");
+    r.classList.toggle("bad", paused);
+    tx.innerHTML = paused ? "Session key revoked. The agent can't top up until you re-enable it. Your positions and buffer are unchanged." : plan($("#cid").value).html;
+  });
+  // while paused, intents are planned but not armed
+  $("#verify").addEventListener("submit", () => { if (paused) setTimeout(() => { $("#result").classList.add("bad"); $("#result-t").innerHTML = "Agent paused. Re-enable the session key to arm this plan."; }, 650); });
+})();

@@ -33,11 +33,14 @@ function start() {
   cam.lookAt(0, CFG.lookY, 0);
   cam.setViewOffset(W, H, CFG.offX, CFG.offY, W, H);   // slide the frame so the cube lands where the design has it
 
-  const load = (u) => { const t = new THREE.TextureLoader().load(u); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
+  // every texture goes through one manager: the cube is only shown once all of them are on the GPU (no untextured flash on refresh)
+  let ready = false;
+  const mgr = new THREE.LoadingManager(() => { ready = true; });
+  const load = (u) => { const t = new THREE.TextureLoader(mgr).load(u); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
   const faceL = load("assets/tex-face-left.webp"), faceR = load("assets/tex-face-right.webp");
   const glowL = load("assets/tex-glow-left.webp"), glowR = load("assets/tex-glow-right.webp");
   const cap = load("assets/tex-cap.webp"), capDark = load("assets/tex-cap-dark.webp");
-  const data = (u) => { const t = new THREE.TextureLoader().load(u); t.anisotropy = 8; return t; };   // linear data maps (no sRGB)
+  const data = (u) => { const t = new THREE.TextureLoader(mgr).load(u); t.anisotropy = 8; return t; };   // linear data maps (no sRGB)
   const nrmL = data("assets/tex-normal-left.webp"), nrmR = data("assets/tex-normal-right.webp"), nrmC = data("assets/tex-normal-cap.webp");
   const rghL = data("assets/tex-rough-left.webp"), rghR = data("assets/tex-rough-right.webp"), rghC = data("assets/tex-rough-cap.webp");
 
@@ -132,19 +135,22 @@ function start() {
   const dot = (() => { const c = document.createElement("canvas"); c.width = c.height = 32; const g = c.getContext("2d"); const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, "rgba(235,245,255,1)"); gr.addColorStop(0.4, "rgba(235,245,255,0.55)"); gr.addColorStop(1, "rgba(235,245,255,0)"); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
   const snow = new THREE.Points(sg, new THREE.PointsMaterial({ map: dot, size: 0.07, transparent: true, depthWrite: false, opacity: 0.85, sizeAttenuation: true }));
   scene.add(snow);
+  if (calib && new URLSearchParams(location.search).has("nosnow")) snow.visible = false;
 
   // ---- loop ----
   const TURN = 28;          // seconds per full turn (the cube repeats every quarter turn, so any point loops cleanly)
   const PULSE = 2.8;        // seconds per seam pulse
   const SWEEP = 7;          // seconds per sheen sweep
-  const t0 = performance.now();
+  let t0 = 0;                 // the loop clock starts when the cube is revealed, so it fades in at the exact pose of the still image
   let first = true, visible = true;
   new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
 
   function frame(now) {
     requestAnimationFrame(frame);
+    if (!ready) return;
+    if (first) { renderer.compile(scene, cam); t0 = now; }
     if (!visible || document.hidden) return;
-    const t = (now - t0) / 1000;
+    const t = calib ? 0 : (now - t0) / 1000;   // ?calib freezes the loop at its first frame (used to render the still fallback)
     box.rotation.y = CFG.rotY + (calib ? calibRot : (t / TURN) * Math.PI * 2);
     box.position.y = calib ? 0 : Math.sin((t / 7) * Math.PI * 2) * 0.05;
     const p = 0.5 + 0.5 * Math.sin((t / PULSE) * Math.PI * 2);

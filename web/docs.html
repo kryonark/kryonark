@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Docs · Kryonark</title>
+<meta name="description" content="Kryonark docs: how omnichain collateral works, the health factor, the AI agent and its intents, the kryonark npm package and CLI, and the public token API.">
+<meta name="theme-color" content="#060910">
+<link rel="canonical" href="https://kryonark.xyz/docs">
+<meta property="og:title" content="Docs · Kryonark">
+<meta property="og:description" content="How Kryonark works, the health factor, intents, and npx kryonark.">
+<meta property="og:image" content="https://kryonark.xyz/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/brand/favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="compact">
+
+<header class="page-hero">
+  <nav class="nav wrap">
+    <a class="brand" href="/"><img src="assets/brand/logo-128.png" srcset="assets/brand/logo-64.png 1x, assets/brand/logo-128.png 2x" alt="" width="34" height="34">Kryonark</a>
+    <ul class="links">
+      <li><a href="/">Collateral</a></li>
+      <li><a href="/#engine">Positions</a></li>
+      <li><a href="/#agent">AI agent</a></li>
+      <li><a href="/security">Security</a></li>
+      <li><a class="on" href="/docs">Docs</a></li>
+    </ul>
+    <div class="nav-r">
+      <div class="socials">
+        <a class="soc" href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener" aria-label="kryonark on npm" title="npm · kryonark"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"/></svg></a>
+        <a class="soc" href="https://github.com/kryonark" target="_blank" rel="noopener" aria-label="Kryonark on GitHub" title="GitHub · kryonark"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+        <button class="soc soon" type="button" aria-label="Kryonark on X, coming soon" title="X · coming soon" data-x><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></button>
+      </div>
+      <button class="btn ghost" type="button" data-connect>Connect wallet</button>
+      <a class="btn fire" href="/#engine">Launch app</a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false" data-menu><span></span><span></span></button>
+  </nav>
+  <div class="page-head wrap">
+    <span class="eyebrow">Docs</span>
+    <h1>How Kryonark<br><span>works.</span></h1>
+    <p>Lock collateral on the chain where it lives, open a tokenized stock position on Robinhood Chain in one signature, and let an AI agent keep it healthy. This page covers the model, the maths, the agent and the tools.</p>
+  </div>
+</header>
+
+<main class="doc wrap">
+  <aside class="toc" aria-label="On this page">
+    <a href="#overview">Overview</a>
+    <a href="#flow">Opening a position</a>
+    <a href="#health">Health factor</a>
+    <a href="#agent">The AI agent</a>
+    <a href="#intents">Intents</a>
+    <a href="#chains">Chains and assets</a>
+    <a href="#npm">npm package and CLI</a>
+    <a href="#api">Public API</a>
+    <a href="#faq">FAQ</a>
+  </aside>
+
+  <div class="doc-body">
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>Tokenized stocks live on <b>Robinhood Chain</b>. Most crypto lives somewhere else: SOL on Solana, BTC on Bitcoin, USDC on Base and Arbitrum. Kryonark lets that crypto back stock positions without moving it.</p>
+      <div class="cards">
+        <div class="card"><h4><i></i>Any chain in</h4><p>Collateral from Solana, Bitcoin, Ethereum, Base, Arbitrum, Optimism, Polygon and Robinhood Chain.</p></div>
+        <div class="card"><h4><i></i>Stocks out</h4><p>Positions in tokenized stocks such as NVDA, AAPL, AMZN and TSLA on Robinhood Chain.</p></div>
+        <div class="card"><h4><i></i>One signature</h4><p>An intent-based flow locks, messages and opens in one step. No manual bridging.</p></div>
+        <div class="card"><h4><i></i>Guarded every block</h4><p>An AI agent watches health and tops up before liquidation.</p></div>
+      </div>
+    </section>
+
+    <section id="flow">
+      <h2>Opening a position</h2>
+      <ol>
+        <li><b>Sign once</b> on the chain that holds your collateral, for example 400 SOL on Solana against an NVDA position.</li>
+        <li>The <b>vault on the home chain locks</b> the collateral.</li>
+        <li>A <b>cross-chain message</b> (LayerZero V2) carries the lock proof to Robinhood Chain.</li>
+        <li>Robinhood Chain <b>opens the stock position</b>, sized so that health starts above the guard line.</li>
+        <li>The <b>agent starts watching</b>. Close any time: repay on Robinhood Chain, collateral unlocks at home.</li>
+      </ol>
+    </section>
+
+    <section id="health">
+      <h2>Health factor</h2>
+      <pre><code>health = collateral value × 0.8 ÷ position value</code></pre>
+      <table>
+        <tr><th>Health</th><th>State</th><th>What happens</th></tr>
+        <tr><td>≥ 1.30</td><td>Safe</td><td>Nothing; the agent keeps watching</td></tr>
+        <tr><td>1.00 – 1.30</td><td>Guard</td><td>The agent tops up from your buffer</td></tr>
+        <tr><td>&lt; 1.00</td><td>Liquidatable</td><td>The position can be liquidated</td></tr>
+      </table>
+      <p>Example: 412.5 SOL at $147 is $60,638. At a 0.8 threshold that counts as $48,510. Against a $26,650 NVDA position, health is <b>1.82</b>. If SOL fell 10%, health would drop to 1.64 and still be safe.</p>
+    </section>
+
+    <section id="agent">
+      <h2>The AI agent</h2>
+      <p>The agent reads prices for both sides of every position each block. When a position nears the guard line, it moves USDC from the buffer you allowed into that position, then posts the action to your history.</p>
+      <p>It signs with a <b>session key</b> that can only add collateral to your own positions. See <a href="/security#agent">Security → Agent session key</a> for the full scope.</p>
+    </section>
+
+    <section id="intents">
+      <h2>Intents</h2>
+      <p>Tell the agent what you want in plain words, in English or Indonesian. Try them in the <a href="/#agent">intent box on the home page</a> or with the CLI.</p>
+      <table>
+        <tr><th>Intent</th><th>Plan</th></tr>
+        <tr><td><code>Protect NVDA if SOL drops 10%</code></td><td>Trigger price for SOL and the USDC top-up that keeps NVDA at today's health</td></tr>
+        <tr><td><code>Lindungi AAPL kalau USDC turun 5%</code></td><td>Same, in Indonesian</td></tr>
+        <tr><td><code>Close TSLA</code></td><td>Repay on Robinhood Chain, unlock the ETH on Arbitrum</td></tr>
+        <tr><td><code>Rotate yield to USDC</code></td><td>Weekly sweep of stock-vault yield into the USDC buffer</td></tr>
+      </table>
+    </section>
+
+    <section id="chains">
+      <h2>Chains and assets</h2>
+      <table>
+        <tr><th>Role</th><th>Chains and assets</th></tr>
+        <tr><td>Collateral</td><td>SOL (Solana), BTC (Bitcoin), USDC (Base), ETH (Arbitrum, Ethereum), plus Optimism, Polygon and Robinhood Chain</td></tr>
+        <tr><td>Positions</td><td>Tokenized stocks on Robinhood Chain (NVDA, AAPL, AMZN, TSLA in the example book)</td></tr>
+        <tr><td>Prices</td><td>Chainlink feeds</td></tr>
+        <tr><td>Messaging</td><td>LayerZero V2, Across intents</td></tr>
+        <tr><td>Accounts</td><td>ERC-4337 smart accounts with session keys</td></tr>
+      </table>
+    </section>
+
+    <section id="npm">
+      <h2>npm package and CLI</h2>
+      <p>The engine's maths and intent layer is open source as <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener"><code>kryonark</code></a> on npm. No dependencies, Node 18+.</p>
+      <h3>CLI</h3>
+      <pre><code>npx kryonark                                     # example book at live prices
+npx kryonark plan "Protect NVDA if SOL drops 10%"  # what the agent would do
+npx kryonark prices                              # live SOL, BTC, ETH spot
+npx kryonark --json                              # machine-readable</code></pre>
+      <h3>Library</h3>
+      <pre><code>import { spotPrices, exampleBook, health, bookHealth, plan } from "kryonark";
+
+const prices = await spotPrices();
+const book = exampleBook(prices);
+health(book[0], prices);        // 1.82
+bookHealth(book, prices);       // the whole book
+plan("Close TSLA", book, prices);</code></pre>
+      <p>Source: <a href="https://github.com/kryonark/kryonark/tree/main/packages/kryonark" target="_blank" rel="noopener">github.com/kryonark/kryonark</a>.</p>
+    </section>
+
+    <section id="api">
+      <h2>Public API</h2>
+      <h3><code>GET https://kryonark.xyz/studio/api/token</code></h3>
+      <p>The token's public details, set by the team. Before launch it returns <code>{"live": false}</code>.</p>
+      <pre><code>{ "live": true, "ca": "0x…", "symbol": "KRYO", "buy": "https://ponsfamily.com/launchpad/0x…",
+  "deadBalance": "…", "totals": { … }, "burns": [ … ] }</code></pre>
+    </section>
+
+    <section id="faq">
+      <h2>FAQ</h2>
+      <h3>Can I use Kryonark today?</h3>
+      <p>The engine is live as a preview on the home page and as <code>npx kryonark</code>. Vault contracts go to Robinhood Chain testnet next; the site doesn't ask for a wallet until then.</p>
+      <h3>Is my collateral bridged?</h3>
+      <p>No. It's locked on its home chain; only a message crosses chains.</p>
+      <h3>What if the agent goes offline?</h3>
+      <p>Your position keeps its collateral and buffer. You can top up or close it yourself at any time.</p>
+      <h3>Where are the official links?</h3>
+      <p>kryonark.xyz, <a href="https://github.com/kryonark" target="_blank" rel="noopener">github.com/kryonark</a> and the <code>kryonark</code> npm package.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <a class="brand-sm" href="/"><img src="assets/brand/logo-64.png" alt="">Kryonark</a>
+    <nav>
+      <a href="/">Home</a><a href="/security">Security</a><a href="/docs">Docs</a>
+      <a href="https://github.com/kryonark" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener">npm</a>
+    </nav>
+    <span>© <span data-year>2026</span> Kryonark</span>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>

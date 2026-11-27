@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Security · Kryonark</title>
+<meta name="description" content="How Kryonark keeps collateral safe: collateral stays on its home chain, the AI agent can only add collateral through a scoped session key, prices come from Chainlink, and every action is on-chain.">
+<meta name="theme-color" content="#060910">
+<link rel="canonical" href="https://kryonark.xyz/security">
+<meta property="og:title" content="Security · Kryonark">
+<meta property="og:description" content="Collateral stays home. The agent can add, never withdraw.">
+<meta property="og:image" content="https://kryonark.xyz/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/brand/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/brand/favicon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<header class="page-hero">
+  <nav class="nav wrap">
+    <a class="brand" href="/"><img src="assets/brand/logo-128.png" srcset="assets/brand/logo-64.png 1x, assets/brand/logo-128.png 2x" alt="" width="34" height="34">Kryonark</a>
+    <ul class="links">
+      <li><a href="/">Collateral</a></li>
+      <li><a href="/#engine">Positions</a></li>
+      <li><a href="/#agent">AI agent</a></li>
+      <li><a class="on" href="/security">Security</a></li>
+      <li><a href="/docs">Docs</a></li>
+    </ul>
+    <div class="nav-r">
+      <div class="socials">
+        <a class="soc" href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener" aria-label="kryonark on npm" title="npm · kryonark"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"/></svg></a>
+        <a class="soc" href="https://github.com/kryonark" target="_blank" rel="noopener" aria-label="Kryonark on GitHub" title="GitHub · kryonark"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg></a>
+        <button class="soc soon" type="button" aria-label="Kryonark on X, coming soon" title="X · coming soon" data-x><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></button>
+      </div>
+      <button class="btn ghost" type="button" data-connect>Connect wallet</button>
+      <a class="btn fire" href="/#engine">Launch app</a>
+    </div>
+    <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false" data-menu><span></span><span></span></button>
+  </nav>
+  <div class="page-head wrap">
+    <span class="eyebrow">Security</span>
+    <h1>The agent can add.<br><span>It can't withdraw.</span></h1>
+    <p>Kryonark is built so that no single part can take your collateral: it stays on its home chain, the AI agent signs with a key that can only top up, and every price and every action is public on-chain.</p>
+  </div>
+</header>
+
+<main class="doc wrap">
+  <aside class="toc" aria-label="On this page">
+    <a href="#principles">Principles</a>
+    <a href="#collateral">Collateral custody</a>
+    <a href="#agent">Agent session key</a>
+    <a href="#prices">Prices and liquidation</a>
+    <a href="#messaging">Cross-chain messaging</a>
+    <a href="#site">This website</a>
+    <a href="#status">Status and audits</a>
+    <a href="#report">Report an issue</a>
+  </aside>
+
+  <div class="doc-body">
+    <section id="principles">
+      <h2>Principles</h2>
+      <div class="cards">
+        <div class="card"><h4><i></i>Collateral stays home</h4><p>SOL stays on Solana, BTC on Bitcoin, USDC on Base. Nothing is bridged by hand.</p></div>
+        <div class="card"><h4><i></i>Least authority</h4><p>The agent's key can add collateral and nothing else. It can't withdraw, trade or move funds out.</p></div>
+        <div class="card"><h4><i></i>Public prices</h4><p>Health factors use Chainlink feeds for both the collateral and the stock, the same numbers anyone can check.</p></div>
+        <div class="card"><h4><i></i>You can always leave</h4><p>Revoke the agent at any time. Closing a position repays the stock side and unlocks your collateral on its home chain.</p></div>
+      </div>
+    </section>
+
+    <section id="collateral">
+      <h2>Collateral custody</h2>
+      <p>When you open a position, your collateral is <b>locked in a vault contract on the chain where it already lives</b>. A cross-chain message tells Robinhood Chain that the collateral is locked; only then is the stock position opened there.</p>
+      <ul>
+        <li>The vault on the home chain only releases collateral when Robinhood Chain confirms the position is repaid or closed.</li>
+        <li>No wrapped copy of your asset is minted, so there is no bridge pool holding everyone's funds.</li>
+        <li>Liquidations, if they ever happen, follow the same path in reverse and are visible on both chains.</li>
+      </ul>
+    </section>
+
+    <section id="agent">
+      <h2>Agent session key</h2>
+      <p>The AI agent never holds your main wallet key. You grant it a <b>session key</b> (ERC-7715 style permissions on an ERC-4337 account) with a narrow scope:</p>
+      <table>
+        <tr><th>Permission</th><th>Allowed</th></tr>
+        <tr><td>Add collateral to your own position</td><td>Yes, from the buffer you set</td></tr>
+        <tr><td>Sweep yield into your buffer</td><td>Only if you enable it</td></tr>
+        <tr><td>Withdraw to any address</td><td>No</td></tr>
+        <tr><td>Open, close or trade positions</td><td>No, only you can</td></tr>
+        <tr><td>Exceed the buffer or the time limit</td><td>No (default 30 days, revoke anytime)</td></tr>
+      </table>
+      <p>If the agent, its server or its model were compromised, the worst it could do is move your own buffer into your own position early.</p>
+    </section>
+
+    <section id="prices">
+      <h2>Prices and liquidation</h2>
+      <p><b>Health = collateral value × 0.8 ÷ position value.</b> Below <code>1.00</code> a position can be liquidated. The agent steps in below <code>1.30</code>, long before that.</p>
+      <ul>
+        <li>Both sides are priced from Chainlink feeds on Robinhood Chain; stale or out-of-range prices pause new positions instead of liquidating on bad data.</li>
+        <li>Robinhood Chain blocks are about 100 ms, so the agent can react within the same minute as a market move.</li>
+        <li>Stock markets close; crypto doesn't. Weekend and overnight gaps are why the buffer and the guard threshold exist.</li>
+      </ul>
+    </section>
+
+    <section id="messaging">
+      <h2>Cross-chain messaging</h2>
+      <p>Lock and unlock instructions travel through established messaging and intent layers (LayerZero V2, Across) rather than a custom bridge. Each message is verified on the destination chain before the vault acts on it.</p>
+      <p>Risk that remains: Kryonark depends on those layers and on the chains themselves. That risk is listed here rather than hidden.</p>
+    </section>
+
+    <section id="site">
+      <h2>This website</h2>
+      <ul>
+        <li>kryonark.xyz never asks for a seed phrase, a private key or a signature, and no one from Kryonark will ever ask for them.</li>
+        <li>The engine on the home page is a preview: an example book with live collateral prices. It doesn't connect to a wallet or send transactions.</li>
+        <li>The site is static, served over HTTPS, and its full source is public at <a href="https://github.com/kryonark/kryonark" target="_blank" rel="noopener">github.com/kryonark/kryonark</a>.</li>
+        <li>The only official links are kryonark.xyz, github.com/kryonark and the <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener">kryonark</a> npm package.</li>
+      </ul>
+    </section>
+
+    <section id="status">
+      <h2>Status and audits</h2>
+      <table>
+        <tr><th>Part</th><th>Status</th></tr>
+        <tr><td>Engine maths, intents, CLI</td><td><span class="status live">Live</span> open source, on npm</td></tr>
+        <tr><td>Site and engine preview</td><td><span class="status live">Live</span> kryonark.xyz</td></tr>
+        <tr><td>Vault contracts</td><td><span class="status next">Next</span> Robinhood Chain testnet</td></tr>
+        <tr><td>Cross-chain collateral</td><td><span class="status next">Next</span> LayerZero V2</td></tr>
+        <tr><td>Agent with session keys</td><td><span class="status later">Later</span> after an external audit</td></tr>
+      </table>
+      <div class="callout">No contract holds user funds yet. Contracts will be audited before mainnet, and the reports will be linked here.</div>
+    </section>
+
+    <section id="report">
+      <h2>Report an issue</h2>
+      <p>Found a vulnerability or something that looks wrong? Open a private security advisory on <a href="https://github.com/kryonark/kryonark/security/advisories/new" target="_blank" rel="noopener">GitHub</a>. Please don't post it publicly until it's fixed.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <a class="brand-sm" href="/"><img src="assets/brand/logo-64.png" alt="">Kryonark</a>
+    <nav>
+      <a href="/">Home</a><a href="/security">Security</a><a href="/docs">Docs</a>
+      <a href="https://github.com/kryonark" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener">npm</a>
+    </nav>
+    <span>© <span data-year>2026</span> Kryonark</span>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
