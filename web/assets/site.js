@@ -1,4 +1,4 @@
-// Kryonark · shared bits for every page: Connect wallet, the footer year, the X toast and the phone menu.
+// Kryonark · shared bits for every page: Connect wallet, the footer year and the phone menu.
 (() => {
   // "Connect wallet": on the home page it opens the real wallet connection (app.js); elsewhere it goes there and connects.
   const open = () => {
@@ -8,11 +8,6 @@
   document.querySelectorAll("[data-connect]").forEach((b) => b.addEventListener("click", open));
   if (location.hash === "#connect") addEventListener("load", () => setTimeout(() => { history.replaceState(null, "", "/#engine"); open(); }, 400));
   document.querySelectorAll("[data-year]").forEach((n) => (n.textContent = new Date().getFullYear()));
-
-  // ---- X: the account isn't live yet. When it is, replace the <span data-x> with <a class="soc" href="https://x.com/…">.
-  const toast = document.createElement("div"); toast.className = "toast"; toast.setAttribute("role", "status"); document.body.appendChild(toast);
-  let tt; const say = (t) => { toast.textContent = t; toast.classList.add("in"); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove("in"), 2200); };
-  document.addEventListener("click", (e) => { if (e.target.closest("[data-x]")) say("Kryonark on X is coming soon."); });
 
   // ---- phone menu: the nav links, plus the socials and Connect wallet that the bar hides on small screens
   const nav = document.querySelector(".nav"), btn = nav && nav.querySelector("[data-menu]"), links = nav && nav.querySelector(".links");

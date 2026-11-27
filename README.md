@@ -2,7 +2,7 @@
 
 **Hold stocks. Keep your crypto.** Kryonark is a lending vault on Robinhood Chain: deposit ETH and Robinhood Stock Tokens as collateral, borrow dollars (USDG) against them without selling, and appoint a guardian agent that can top up your collateral from your own buffer and can never withdraw.
 
-[kryonark.xyz](https://kryonark.xyz) · [docs](https://kryonark.xyz/docs) · [security](https://kryonark.xyz/security) · [npm](https://www.npmjs.com/package/kryonark) · `npx kryonark`
+[kryonark.xyz](https://kryonark.xyz) · [docs](https://kryonark.xyz/docs) · [security](https://kryonark.xyz/security) · [X](https://x.com/KryonarkFinance) · [npm](https://www.npmjs.com/package/kryonark) · `npx kryonark`
 
 ![Kryonark](web/assets/og.jpg)
 
