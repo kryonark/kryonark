@@ -1,6 +1,6 @@
 {
   "name": "kryonark",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Read the live Kryonark vault on Robinhood Chain: collateral, debt, health and the guardian agent. CLI and library, no dependencies.",
   "type": "module",
   "exports": {

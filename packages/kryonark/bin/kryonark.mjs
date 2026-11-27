@@ -4,6 +4,7 @@
 // npx kryonark agent              the agent's heartbeat
 // add --json for machine-readable output
 import { protocol, account, agent } from "../src/index.mjs";
+const win = (s) => { const h = (s.checksWindowMs || 86_400_000) / 3_600_000; return h < 23.5 ? `the last ${Math.max(1, Math.round(h))} h` : "24 h"; };
 const args = process.argv.slice(2), json = args.includes("--json"), [cmd, arg] = args.filter((a) => !a.startsWith("--"));
 const usd = (n) => "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
 const h = (x) => (isFinite(x) ? x.toFixed(2) : "∞");
@@ -18,7 +19,7 @@ try {
       `  health   ${h(a.health)} (${a.status})   can borrow ${usd(a.borrowable)} more`].join("\n"));
   } else if (cmd === "agent") {
     const s = await agent();
-    out(s, `agent ${s.agent} · ${s.online ? "online" : "offline"} · ${s.checks24h ?? 0} checks in 24 h · ${s.guarded ?? 0} accounts guarded · ${(s.actions || []).length} recent top-ups`);
+    out(s, `agent ${s.agent} · ${s.online ? "online" : "offline"} · ${s.checks24h ?? 0} checks in ${win(s)} · ${s.guarded ?? 0} accounts guarded · ${(s.actions || []).length} recent top-ups`);
   } else {
     const p = await protocol();
     let s = null; try { s = await agent(); } catch {}
@@ -27,6 +28,6 @@ try {
       ...p.assets.map((a) => `  ${a.symbol.padEnd(5)} ${usd(a.usd).padStart(11)}   ${a.deposited} deposited   counts ${Math.round(a.weight * 100)}%${a.priceOk ? "" : "   price stale"}`),
       `  ${p.lendPool.symbol} pool: ${p.lendPool.cash.toLocaleString("en-US")} available, ${p.lendPool.borrowed.toLocaleString("en-US")} borrowed at ${p.apr}% a year`,
       `  deposited ${usd(p.depositedUsd)} · borrowed ${usd(p.borrowedUsd)}`,
-      `  agent: ${s ? (s.online ? `online, ${s.checks24h} checks in 24 h, ${s.guarded} accounts guarded` : "offline") : "unreachable"}`].join("\n"));
+      `  agent: ${s ? (s.online ? `online, ${s.checks24h} checks in ${win(s)}, ${s.guarded} accounts guarded` : "offline") : "unreachable"}`].join("\n"));
   }
 } catch (e) { console.error("kryonark: " + e.message); process.exit(1); }

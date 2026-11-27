@@ -73,10 +73,33 @@ const oracle = new ethers.Contract(ORACLE, [
 
 const status = {
   configured: true, network: NETWORK, chainId: null, agent: wallet.address, vault: VAULT, oracle: ORACLE,
-  startedAt: Date.now(), lastCheck: 0, checkEveryMs: CHECK_MS, checks24h: 0, block: 0,
+  startedAt: Date.now(), lastCheck: 0, checkEveryMs: CHECK_MS, checks24h: 0, checksSince: null, checksWindowMs: 0, block: 0,
   accounts: 0, guarded: 0, borrowers: 0, atRisk: 0, prices: {}, lastPricePush: null, actions: [], errors: 0, lastError: null,
 };
-const checkTimes = [];
+// health checks per minute, kept on disk so a restart doesn't reset the 24 h count
+const CHECKS_FILE = new URL("./.checks.json", import.meta.url);
+const DAY = 86_400_000;
+let checkMin = new Map();
+try {
+  const j = JSON.parse(fs.readFileSync(CHECKS_FILE, "utf8"));
+  if (j.vault === VAULT) for (const [m, n] of j.min) if (m * 60_000 > Date.now() - DAY) checkMin.set(m, n);
+} catch {}
+let lastSave = 0;
+function countCheck(now) {
+  const m = Math.floor(now / 60_000);
+  checkMin.set(m, (checkMin.get(m) || 0) + 1);
+  for (const k of checkMin.keys()) if (k * 60_000 <= now - DAY) checkMin.delete(k);
+  let n = 0, first = Infinity;
+  for (const [k, v] of checkMin) { n += v; if (k < first) first = k; }
+  status.checks24h = n;
+  // how much of the last 24 h the count covers; shorter while the agent is younger than a day
+  status.checksSince = Math.max(first * 60_000, now - DAY);
+  status.checksWindowMs = now - status.checksSince;
+  if (now - lastSave > 60_000) {
+    lastSave = now;
+    try { fs.writeFileSync(CHECKS_FILE, JSON.stringify({ vault: VAULT, min: [...checkMin] })); } catch {}
+  }
+}
 let USD = null, ETH_LT = 8000;
 
 // ---------- off-chain prices (only used for assets without a Chainlink feed) ----------
@@ -191,9 +214,7 @@ async function check() {
   }
   status.accounts = accounts.size; status.guarded = guarded; status.borrowers = borrowers; status.atRisk = atRisk;
   status.lastCheck = Date.now();
-  checkTimes.push(status.lastCheck);
-  while (checkTimes.length && checkTimes[0] < Date.now() - 86_400_000) checkTimes.shift();
-  status.checks24h = checkTimes.length;
+  countCheck(status.lastCheck);
 }
 
 // ---------- loops ----------

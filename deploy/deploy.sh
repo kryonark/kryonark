@@ -7,8 +7,8 @@ HOST=${HOST:-root@203.194.113.116}
 cd "$(dirname "$0")/.."
 ssh -o BatchMode=yes "$HOST" "mkdir -p /var/www/kryonark/web /var/www/kryonark/studio/data /var/www/kryonark/agent /var/www/kryonark-acme && chmod 700 /var/www/kryonark/studio/data /var/www/kryonark/agent"
 rsync -az --delete --filter="protect /assets/network.json" --exclude /assets/network.json --exclude .DS_Store web/ "$HOST:/var/www/kryonark/web/"
-rsync -az --delete --filter="protect /node_modules/" --filter="protect /.key" --filter="protect /.env" --filter="protect /.env.network" \
-  --exclude node_modules --exclude /.key --exclude /.env --exclude /.env.network --exclude .DS_Store agent/ "$HOST:/var/www/kryonark/agent/"
+rsync -az --delete --filter="protect /node_modules/" --filter="protect /.key" --filter="protect /.env" --filter="protect /.env.network" --filter="protect /.checks.json" \
+  --exclude node_modules --exclude /.key --exclude /.env --exclude /.env.network --exclude /.checks.json --exclude .DS_Store agent/ "$HOST:/var/www/kryonark/agent/"
 rsync -az --delete --filter="protect /node_modules/" --filter="protect /data/" --filter="protect /.env" \
   --exclude node_modules --exclude /.env --exclude '/data/*' --exclude .DS_Store studio/ "$HOST:/var/www/kryonark/studio/"
 ssh -o BatchMode=yes "$HOST" "export LC_ALL=C.UTF-8; set -e

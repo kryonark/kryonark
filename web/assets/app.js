@@ -232,7 +232,10 @@ async function status() {
   }).join("");
   const n = hours.reduce((a, h) => a + h.length, 0);
   $("#st-checks").textContent = s && s.configured !== false ? Number(s.checks24h || 0).toLocaleString("en-US") : "–";
-  $("#tops-n").textContent = s && s.configured !== false ? `${n} top-up${n === 1 ? "" : "s"} · ${Number(s.checks24h || 0).toLocaleString("en-US")} checks` : "waiting for the vault";
+  // the count covers less than 24 h while the agent is younger than a day; say so
+  const winH = s && s.checksWindowMs ? s.checksWindowMs / 3_600_000 : 24;
+  $("#st-checks-l").textContent = winH < 23.5 ? `Agent health checks, last ${winH < 1 ? Math.max(1, Math.round(winH * 60)) + " min" : Math.round(winH) + " h"}` : "Agent health checks, 24 h";
+  $("#tops-n").textContent = s && s.configured !== false ? `${n} top-up${n === 1 ? "" : "s"} · ${Number(s.checks24h || 0).toLocaleString("en-US")} checks${winH < 23.5 ? "" : " in 24 h"}` : "waiting for the vault";
   if (ME && S.ok) render();
 }
 setInterval(() => {

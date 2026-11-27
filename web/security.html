@@ -82,12 +82,30 @@
         <tr><td>Act after you revoke it or after it expires</td><td>No (max 90 days, revoke anytime)</td></tr>
       </table>
       <p>If the agent's server or key were compromised, the worst it could do is move your buffer into your collateral early. That's still your ETH, in your account.</p>
+      <h3>Check it in the deployed code</h3>
+      <p>The vault's source is verified on <a href="https://repo.sourcify.dev/4663/0x857C224f9896c9A0F17f564D9C8Ba9Cf73802764" target="_blank" rel="noopener">Sourcify</a> (exact match: the bytecode on chain compiles from this file). <code>guardTopUp</code> is the only function that reads <code>guardians</code>, and this is all of it (<a href="https://github.com/kryonark/kryonark/blob/main/contracts/src/KryonarkVault.sol#L292-L306" target="_blank" rel="noopener">KryonarkVault.sol, lines 292–306</a>):</p>
+<pre><code>function guardTopUp(address account, uint256 amount) external nonReentrant {
+    Guardian memory g = guardians[account];
+    if (g.agent == address(0) || msg.sender != g.agent) revert NotGuardian();
+    if (block.timestamp &gt; g.expiry) revert Expired();
+    accrue();
+    uint256 before = healthOf(account);
+    if (before &gt;= GUARD_HEALTH) revert Healthy(before);
+    if (amount == 0 || amount &gt; buffer[account]) revert Amount();
+    buffer[account] -= amount;
+    totalBuffer -= amount;
+    collateral[account][ETH] += amount;
+    assets[ETH].total += amount;
+    emit Deposited(account, ETH, amount);
+    emit GuardTopUp(account, msg.sender, amount, before, healthOf(account));
+}</code></pre>
+      <p>It never sends a token or ETH anywhere: it only moves an amount from <code>buffer[account]</code> to <code>collateral[account][ETH]</code> inside the vault. Every function that sends funds out (<code>withdraw</code>, <code>withdrawBuffer</code>, <code>borrow</code>, <code>unsupply</code>) acts on <code>msg.sender</code>'s own account and pays <code>msg.sender</code>; <code>liquidate</code> needs health below 1.00, which anyone can call, guardian or not.</p>
     </section>
 
     <section id="prices">
       <h2>Prices and liquidation</h2>
       <ul>
-        <li><b>Mainnet:</b> every price comes from Chainlink feeds on Robinhood Chain, refused when older than its heartbeat.</li>
+        <li><b>Mainnet:</b> ETH and seven stocks (NVDA, AAPL, TSLA, AMZN, MSFT, GOOGL, META) come from Chainlink feeds on Robinhood Chain, refused when older than their heartbeat. Chainlink has no feed for Anthropic (ANT) or USDG yet, so the agent pushes those: ANT from Robinhood's token quote, USDG at $1.00. Each push can move a price at most 25%, prices older than an hour are refused, and the owner can switch an asset to a Chainlink feed once one exists.</li>
         <li><b>Testnet:</b> Chainlink has no feeds there, so the agent pushes ETH (Coinbase) and Stock Token (Robinhood) prices. Each push can move a price at most 25%, and prices older than an hour are refused.</li>
         <li>Liquidation needs health below 1.00. Liquidators repay at most half the debt and receive 5% extra collateral.</li>
         <li>Stock markets close and crypto doesn't: weekend gaps are why borrowing stops at 1.25 and the agent steps in at 1.30.</li>

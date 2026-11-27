@@ -141,7 +141,7 @@
         <tr><td>Agent acts below</td><td>1.30, aiming for 1.50</td></tr>
         <tr><td>Liquidation</td><td>below 1.00, 5% bonus, up to 50% of the debt</td></tr>
         <tr><td>Borrow rate</td><td>set on-chain (<code>aprBps</code>), max 50% a year</td></tr>
-        <tr><td>Prices</td><td>Chainlink on mainnet; on testnet (no Chainlink) the agent pushes Coinbase and Robinhood prices, each push capped at a 25% move</td></tr>
+        <tr><td>Prices</td><td>Chainlink on mainnet for ETH and seven stocks; ANT and USDG (no Chainlink feed yet) are pushed by the agent; on testnet (no Chainlink) the agent pushes Coinbase and Robinhood prices, each push capped at a 25% move</td></tr>
       </table>
       <p>Source and tests: <a href="https://github.com/kryonark/kryonark/tree/main/contracts" target="_blank" rel="noopener">github.com/kryonark/kryonark/contracts</a>.</p>
     </section>
