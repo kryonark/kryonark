@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kryonark · studio</title><meta name="robots" content="noindex"><link rel="icon" type="image/png" href="/studio/favicon.png?v=2">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="/assets/vendor/ethers-6.13.4.umd.min.js" defer></script><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#060910;--panel:rgba(15,24,33,.78);--fg:#eef2f6;--dim:#8d99a8;--faint:#56616d;--line:rgba(255,255,255,.08);--sig:#fb6a2a;--up:#6fcf9b;--bad:#ff6b72;--sans:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,monospace}
 *{box-sizing:border-box}html,body{margin:0;background:radial-gradient(900px 520px at 50% -120px,rgba(60,110,170,.22),transparent 70%),var(--bg);background-attachment:fixed;min-height:100%;color:var(--fg);font:400 15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
@@ -13,7 +13,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:12px;ma
 .card{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:16px}
 h2{margin:0 0 4px;font:600 19px/1.25 "Inter Tight",sans-serif;letter-spacing:-.01em}.sub{margin:0 0 16px;color:var(--dim);font-size:13.5px}
 label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:12px 0 6px}
-input{width:100%;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:12px 13px;outline:0;font-family:var(--mono);font-size:13.5px}input:focus{border-color:var(--sig)}
+select,input{width:100%;color:var(--fg);background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:10px;padding:12px 13px;outline:0;font-family:var(--mono);font-size:13.5px}input:focus{border-color:var(--sig)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:160px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:0;border-radius:999px;background:#fb6a2a;color:#1a0a03;font-weight:700;cursor:pointer;white-space:nowrap}
 .btn.sig{background:#fb6a2a}.btn.ghost{background:none;border:1px solid var(--line);color:var(--fg)}.btn:disabled{opacity:.45;cursor:default}
@@ -32,6 +32,15 @@ table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px
 <form id="gf"><label for="key">Studio key</label><input id="key" type="password" autocomplete="current-password"><div style="margin-top:14px"><button class="btn">Unlock</button></div><div class="msg bad" id="gm"></div></form></div>
 
 <div id="app" hidden>
+  <section class="card" id="proto"><h2>00 · Protocol contracts</h2><p class="sub">Deploy KryoOracle and KryonarkVault from <b>your own wallet</b> (it becomes the owner; no key is sent to the server). The site and the agent switch to the new contracts as soon as it finishes.</p>
+    <div class="kv" id="pkv"></div>
+    <div class="row"><div><label for="pnet">Network</label><select id="pnet"><option value="testnet">Robinhood Chain testnet</option><option value="mainnet">Robinhood Chain mainnet (real funds)</option></select></div>
+      <div><label for="prep">Agent / price reporter</label><input id="prep" spellcheck="false" placeholder="0x…"></div></div>
+    <div class="row"><div><label for="pbc">Borrow cap ($)</label><input id="pbc" inputmode="numeric"></div><div><label for="pec">ETH cap</label><input id="pec" inputmode="numeric"></div>
+      <div><label for="psc">Cap per stock (tokens)</label><input id="psc" inputmode="numeric"></div><div><label for="papr">Borrow rate (% a year)</label><input id="papr" inputmode="decimal" value="8"></div></div>
+    <p class="note" id="pinfo"></p>
+    <div class="row" style="margin-top:14px"><div style="flex:0"><button class="btn sig" type="button" id="pgo">Connect wallet and deploy</button></div><div style="flex:0"><button class="btn ghost" type="button" id="preset">Forget a half-finished deploy</button></div></div>
+    <div class="scroll"><table id="plog"></table></div><div class="msg" id="pm"></div></section>
   <section class="card"><h2>01 · Token</h2><p class="sub">The CA shows on kryonark.xyz with a copy button and a Buy on Pons link as soon as you save it. Leave it empty to hide it.</p>
     <form id="tf"><div class="row"><div style="flex:3"><label for="ca">Contract address</label><input id="ca" placeholder="0x…" spellcheck="false"></div><div><label for="sym">Ticker</label><input id="sym" maxlength="13"></div></div>
     <div style="margin-top:14px"><button class="btn">Save token</button></div><div class="msg" id="tm"></div></form></section>
@@ -90,4 +99,53 @@ $("sf").onsubmit=async(e)=>{e.preventDefault();const u=MAXED?"max":$("susd").val
  const b=$("sgo");b.disabled=true;b.textContent="Burning…";say("sm","Burning. Keep this tab open.",true);
  try{const r=await api("/supply",{method:"POST",body:JSON.stringify({usd:u})});say("sm",`Burned ${num(r.burned,0)} $${S.config.symbol} (≈ $${r.usd}). Tx ${r.burnTx.slice(0,10)}…`,true);$("susd").value="";MAXED=false}catch(x){say("sm",x.message,false)}finally{b.disabled=false;b.textContent="Burn supply";load()}};
 $("held").onclick=async()=>{if(!confirm("Burn every token the buyback wallet holds?"))return;try{const r=await api("/burn-held",{method:"POST"});say("bm",`Burned ${num(r.burned,0)} held tokens.`,true)}catch(x){say("bm",x.message,false)}load()};
+
+// ---------------------------------------------------------------- 00 · protocol deploy (signed in the owner's browser wallet)
+const Z="0x0000000000000000000000000000000000000000";
+const PRESETS={
+ testnet:{network:"testnet",testnet:true,chainId:46630,chainName:"Robinhood Chain Testnet",rpc:"https://rpc.testnet.chain.robinhood.com",explorer:"https://explorer.testnet.chain.robinhood.com",faucet:"https://faucet.testnet.chain.robinhood.com",blockMs:250,
+  usd:"new",caps:{borrow:1000000,eth:1000,stock:100000},
+  stocks:[["TSLA","Tesla","0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E"],["AMZN","Amazon","0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02"],["AMD","AMD","0x71178BAc73cBeb415514eB542a8995b82669778d"],["PLTR","Palantir","0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0"],["NFLX","Netflix","0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93"]],feeds:{}},
+ mainnet:{network:"mainnet",testnet:false,chainId:4663,chainName:"Robinhood Chain",rpc:"https://rpc.mainnet.chain.robinhood.com",explorer:"https://robinhoodchain.blockscout.com",blockMs:120,
+  usd:{symbol:"USDG",name:"Global Dollar",address:"0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",decimals:6,logo:"usdg"},caps:{borrow:10000,eth:10,stock:50},
+  stocks:[["NVDA","NVIDIA","0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC"],["AAPL","Apple","0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9"],["TSLA","Tesla","0x322F0929c4625eD5bAd873c95208D54E1c003b2d"],["AMZN","Amazon","0x12f190a9F9d7D37a250758b26824B97CE941bF54"],["MSFT","Microsoft","0xe93237C50D904957Cf27E7B1133b510C669c2e74"],["GOOGL","Alphabet","0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3"],["META","Meta","0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35"]],
+  feeds:{ETH:"0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9",NVDA:"0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15",AAPL:"0x6B22A786bAa607d76728168703a39Ea9C99f2cD0",TSLA:"0x4A1166a659A55625345e9515b32adECea5547C38",AMZN:"0xD5a1508ceD74c084eBf3cBe853e2C968fB2a651C",MSFT:"0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E",GOOGL:"0xF6f373a037c30F0e5010d854385cA89185AE638b",META:"0x7C38C00C30BEe9378381E7B6135d7283356D71b1"}}};
+const plog=[];const pl=(t,h,url)=>{plog.push([new Date().toISOString().slice(11,19),t,h?`<a href="${url}/tx/${esc(h)}" target="_blank" rel="noopener">${esc(h.slice(0,12))}…</a>`:""]);$("plog").innerHTML=plog.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${r[2]}</td></tr>`).join("")};
+function presetUi(){const P=PRESETS[$("pnet").value];$("pbc").value=P.caps.borrow;$("pec").value=P.caps.eth;$("psc").value=P.caps.stock;
+ $("pinfo").innerHTML=P.testnet?`Testnet: deploys a test dollar (tUSD) with a public faucet and lists ${P.stocks.map(s=>s[0]).join(", ")} (Robinhood's official test Stock Tokens). Prices are pushed by the agent. Get test ETH at <a href="${P.faucet}" target="_blank" rel="noopener">the faucet</a>.`
+  :`<b style="color:var(--bad)">Mainnet, real funds.</b> Borrows USDG, lists ${P.stocks.map(s=>s[0]).join(", ")} with Chainlink feeds (USDG is priced by the agent at $1). The contracts are not audited: keep the caps small, and move ownership to a multisig before raising them. Not for US persons.`}
+$("pnet").onchange=presetUi;presetUi();
+async function protoStatus(){try{const [n,a]=await Promise.all([api("/network").catch(()=>({})),fetch("/agent/api/status",{cache:"no-store"}).then(r=>r.json()).catch(()=>null)]);
+ if(a&&a.agent&&!$("prep").value)$("prep").value=a.agent;
+ const net=n.network;$("pkv").innerHTML=[[net?net.chainName:"not deployed","network"],[net?net.vault:"—","vault"],[a?(a.online?"online":a.configured===false?"waiting for contracts":"offline"):"not running","agent"],[a?a.agent:"—","agent address (fund it with a little ETH for gas)"]].map(([b,s])=>`<div><b>${esc(b)}</b><span>${s}</span></div>`).join("")}catch{}}
+let ART=null;
+async function wallet(P){const eth=window.ethereum;if(!eth)throw new Error("No browser wallet found.");await eth.request({method:"eth_requestAccounts"});const want="0x"+P.chainId.toString(16);
+ if(await eth.request({method:"eth_chainId"})!==want){try{await eth.request({method:"wallet_switchEthereumChain",params:[{chainId:want}]})}catch(e){if(e.code!==4902&&e?.data?.originalError?.code!==4902)throw e;await eth.request({method:"wallet_addEthereumChain",params:[{chainId:want,chainName:P.chainName,nativeCurrency:{name:"Ether",symbol:"ETH",decimals:18},rpcUrls:[P.rpc],blockExplorerUrls:[P.explorer]}]})}}
+ return new ethers.BrowserProvider(eth).getSigner()}
+$("preset").onclick=()=>{localStorage.removeItem("kryoDeploy");plog.length=0;$("plog").innerHTML="";say("pm","Cleared. The next deploy starts from scratch.",true)};
+$("pgo").onclick=async()=>{const key=$("pnet").value,P=PRESETS[key],rep=$("prep").value.trim();const b=$("pgo");
+ try{if(!window.ethers)throw new Error("ethers didn't load; reload the page.");if(!ethers.isAddress(rep))throw new Error("Enter the agent address (it's filled from the agent automatically when it's running).");
+  if(!P.testnet&&!confirm("Deploy to Robinhood Chain MAINNET with real funds? The contracts are not audited."))return;
+  b.disabled=true;b.textContent="Deploying…";ART||=await (await fetch("/studio/artifacts.json")).json();
+  const s=await wallet(P),me=await s.getAddress();pl(`wallet ${me} on ${P.chainName}`);
+  const st=JSON.parse(localStorage.getItem("kryoDeploy")||"{}");const save=()=>localStorage.setItem("kryoDeploy",JSON.stringify(st));if(st.chainId!==P.chainId){for(const k in st)delete st[k];st.chainId=P.chainId}
+  const wait=async(label,txp)=>{const tx=await txp;pl(label+": sent",tx.hash,P.explorer);const r=await tx.wait();pl(label+": confirmed",tx.hash,P.explorer);return r};
+  const deploy=async(name,args)=>{const f=new ethers.ContractFactory(ART[name].abi,ART[name].bytecode,s);const c=await f.deploy(...args);pl(`${name}: sent`,c.deploymentTransaction().hash,P.explorer);const r=await c.deploymentTransaction().wait();const a=await c.getAddress();pl(`${name}: ${a}`);return {a,block:r.blockNumber}};
+  let usd=P.usd;
+  if(P.usd==="new"){if(!st.usd){const d=await deploy("TestUSD",[]);st.usd=d.a;st.block=d.block;save()}usd={symbol:"tUSD",name:"Kryonark Test USD",address:st.usd,decimals:6,logo:"tusd"}}
+  if(!st.oracle){const d=await deploy("KryoOracle",[rep]);st.oracle=d.a;st.block??=d.block;save()}
+  const bc=BigInt(Math.round(+$("pbc").value||0))*10n**BigInt(usd.decimals);
+  if(!st.vault){const d=await deploy("KryonarkVault",[st.oracle,usd.address,bc]);st.vault=d.a;save()}
+  const V=new ethers.Contract(st.vault,ART.KryonarkVault.abi,s),O=new ethers.Contract(st.oracle,ART.KryoOracle.abi,s);
+  st.done||=[];const once=async(k,label,f)=>{if(st.done.includes(k))return;await wait(label,f());st.done.push(k);save()};
+  await once("eth","list ETH (80%)",()=>V.listAsset(Z,8000,BigInt(Math.round(+$("pec").value||0))*10n**18n));
+  for(const [sym,,addr] of P.stocks)await once("s:"+sym,`list ${sym} (70%)`,()=>V.listAsset(addr,7000,BigInt(Math.round(+$("psc").value||0))*10n**18n));
+  for(const [sym,agg] of Object.entries(P.feeds)){const asset=sym==="ETH"?Z:P.stocks.find(x=>x[0]===sym)[2];await once("f:"+sym,`Chainlink feed ${sym}`,()=>O.setFeed(asset,agg,90000))}
+  const apr=Math.round((+$("papr").value||8)*100);if(apr!==800)await once("apr",`borrow rate ${apr/100}%`,()=>V.setParams(apr,bc));
+  const net={network:P.network,testnet:P.testnet,chainId:P.chainId,chainName:P.chainName,rpc:P.rpc,explorer:P.explorer,faucet:P.faucet,blockMs:P.blockMs,deployBlock:st.block||0,vault:st.vault,oracle:st.oracle,usd,
+   collateral:[{symbol:"ETH",name:"Ether",address:Z,decimals:18,logo:"eth"},...P.stocks.map(([sym,name,address])=>({symbol:sym,name,address,decimals:18,logo:sym.toLowerCase()}))]};
+  await api("/network",{method:"POST",body:JSON.stringify(net)});pl("site and agent switched to the new contracts");
+  localStorage.removeItem("kryoDeploy");say("pm",`Done. Vault ${st.vault}. The agent restarts within seconds; fund its address with a little ETH for gas.`,true);protoStatus();
+ }catch(x){say("pm",(x.shortMessage||x.message)+" — run it again to continue from where it stopped.",false)}finally{b.disabled=false;b.textContent="Connect wallet and deploy"}};
+const _enter=enter;enter=async()=>{await _enter();protoStatus();setInterval(protoStatus,15000)};if(KEY){protoStatus();setInterval(protoStatus,15000)}
 </script></body></html>

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Kryonark · Trade stocks from any chain</title>
-<meta name="description" content="Omnichain collateral for tokenized stocks on Robinhood Chain. Lock SOL, BTC or USDC where it lives, open stock positions in one signature, and let an AI agent guard your collateral 24/7.">
+<title>Kryonark · Hold stocks, keep your crypto</title>
+<meta name="description" content="Borrow against ETH and Robinhood Stock Tokens on Robinhood Chain without selling, with an agent you appoint that can top up your collateral and never withdraw it.">
 <meta name="theme-color" content="#060910">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Kryonark · Trade stocks from any chain">
-<meta property="og:description" content="Lock SOL, BTC or USDC where it lives and open tokenized stock positions on Robinhood Chain in one signature, guarded by an AI agent 24/7.">
+<meta property="og:title" content="Kryonark · Hold stocks, keep your crypto">
+<meta property="og:description" content="Deposit ETH and Stock Tokens, borrow dollars against them, and let an agent guard your account. On Robinhood Chain.">
 <link rel="canonical" href="https://kryonark.xyz/">
 <meta property="og:url" content="https://kryonark.xyz/">
 <meta property="og:site_name" content="Kryonark">
@@ -40,7 +40,7 @@
     <ul class="links">
       <li><a class="on" href="/">Collateral</a></li>
       <li><a href="/#engine">Positions</a></li>
-      <li><a href="/#agent">AI agent</a></li>
+      <li><a href="/#agent">Agent</a></li>
       <li><a href="/security">Security</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul>
@@ -56,14 +56,14 @@
     <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false" data-menu><span></span><span></span></button>
   </nav>
 
-  <div class="attest"><span class="dot" id="agent-dot"></span><span id="agent-state">Agent online</span> · health factor <span id="hf-pill">1.84</span></div>
+  <div class="attest"><span class="dot" id="agent-dot"></span><span id="agent-state">Agent</span> · <span id="agent-guarded">connecting…</span></div>
 
   <div class="hero-body wrap">
-    <h1>Trade stocks<br><span>from any chain.</span></h1>
+    <h1>Hold stocks.<br><span>Keep your crypto.</span></h1>
     <div class="hero-side">
-      <p>Lock SOL, BTC or USDC where it lives and open tokenized stock positions on Robinhood Chain in one signature. No manual bridging, and an AI agent guards it 24/7.</p>
+      <p>Deposit ETH and Robinhood Stock Tokens, borrow dollars against them without selling, and let an agent you appoint guard your account around the clock. Live on Robinhood Chain.</p>
       <div class="hero-cta">
-        <a class="btn soft" href="#engine">Open a position <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5v9M2.5 7 6 10.5 9.5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+        <a class="btn soft" href="#engine">Open the app <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5v9M2.5 7 6 10.5 9.5 7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
         <a class="btn ghost" href="#agent">How it works</a>
       </div>
       <div class="ca-chip" id="ca-chip" hidden><span class="ca-tick" id="ca-sym">$KRYO</span><code id="ca-addr"></code><button type="button" id="ca-copy">Copy</button><a id="ca-buy" href="https://ponsfamily.com/launchpad/" target="_blank" rel="noopener">Buy on Pons</a></div>
@@ -71,13 +71,11 @@
   </div>
 
   <div class="stats wrap">
-    <div class="has-chains"><b>8 chains</b><span>Collateral sources</span>
-      <i class="chains" aria-label="Solana, Bitcoin, Ethereum, Base, Arbitrum, Optimism, Polygon, Robinhood Chain">
-        <img src="assets/logos/solana.svg" alt=""><img src="assets/logos/bitcoin.svg" alt=""><img src="assets/logos/ethereum.svg" alt=""><img src="assets/logos/base.svg" alt=""><img src="assets/logos/arbitrum.svg" alt=""><img src="assets/logos/optimism.svg" alt=""><img src="assets/logos/polygon.svg" alt=""><img src="assets/logos/robinhood.svg" alt="">
-      </i></div>
-    <div><b>1 signature</b><span>Per cross-chain position</span></div>
-    <div><b>~100 ms</b><span>Robinhood Chain blocks</span></div>
-    <div><b>24 / 7</b><span>Agent risk monitoring</span></div>
+    <div class="has-chains"><b id="st-tvl">–</b><span>Deposited in the vault</span>
+      <i class="chains" id="st-assets" aria-label="Collateral assets"></i></div>
+    <div><b id="st-debt">–</b><span id="st-apr">Borrowed</span></div>
+    <div><b id="st-block">–</b><span>Robinhood Chain blocks</span></div>
+    <div><b id="st-checks">–</b><span>Agent health checks, 24 h</span></div>
   </div>
 </header>
 
@@ -89,56 +87,86 @@
     <li><img src="assets/logos/arbitrum.svg" alt="" width="24" height="24">Arbitrum</li>
     <li><img src="assets/logos/ethereum.svg" alt="" width="24" height="24">Ethereum</li>
     <li><img src="assets/logos/chainlink.svg" alt="" width="24" height="24">Chainlink</li>
-    <li><img src="assets/logos/across.svg" alt="" width="24" height="24">Across</li>
   </ul>
 </section></div>
 
 <!-- ============ ENGINE ============ -->
 <section class="proof wrap" id="engine">
   <div class="proof-l" id="agent">
-    <span class="eyebrow">Omnichain collateral</span>
+    <span class="eyebrow" id="net-eyebrow">Robinhood Chain</span>
     <h2>Guarded<br><span>every block.</span></h2>
-    <p>Your collateral stays on its home chain. The agent reads Chainlink prices for both sides and tops up any position drifting toward liquidation, using only funds you allowed.</p>
+    <p>Deposit ETH and Robinhood Stock Tokens, borrow dollars against them without selling, and appoint the Kryonark agent as your guardian. Every few seconds it reads your health on-chain; below 1.30 it moves your own ETH buffer into your collateral. It can add. It can't withdraw.</p>
     <div class="mini">
-      <div class="mini-row"><small>Latest health check</small><small>Next check in</small></div>
-      <div class="mini-row mono big"><span id="chk-time">14:00:03 UTC</span><span id="chk-next">0.9 s</span></div>
+      <div class="mini-row"><small>Agent's last health check</small><small>Next check in</small></div>
+      <div class="mini-row mono big"><span id="chk-time">connecting…</span><span id="chk-next">–</span></div>
     </div>
     <div class="mini auditor">
-      <div><small>Agent session key · ERC-7715</small><b id="sk-state">Top-up only · 30 days</b></div>
-      <button class="btn ghost sm" type="button" id="sk-toggle" aria-pressed="false">Revoke</button>
+      <div><small>Your guardian · on-chain</small><b id="sk-state">Connect a wallet</b></div>
+      <button class="btn ghost sm" type="button" id="sk-toggle">Connect</button>
     </div>
   </div>
 
   <div class="proof-r">
+    <div class="callout terms" id="terms-note" hidden>
+      <b>Before you connect.</b> Robinhood Stock Tokens may not be offered, sold or delivered to US persons or in the United States, so Kryonark isn't for US persons. The vault contracts are open source and tested but not yet externally audited, and Robinhood can pause or block Stock Token transfers. Only use what you can afford to lose. <a href="/security">Read the security page</a>. Press <b>Connect wallet</b> again to confirm you've read this and aren't a US person.
+    </div>
     <article class="panel reserves">
       <header>
-        <div><h3>Collateral vs. stock positions</h3><small id="px-note">Example portfolio · live prices</small></div>
-        <div class="ratio"><b id="hf">1.84</b><span class="ok"><i></i>Safe · liquidation at 1.00</span></div>
+        <div><h3 id="book-h">Markets</h3><small id="px-note">Reading the vault…</small></div>
+        <div class="ratio"><b id="hf">–</b><span class="ok" id="hf-note"><i></i>liquidation at 1.00</span></div>
       </header>
-      <div class="legend"><span><i class="held"></i>Collateral, home chain</span><span><i class="owed"></i>Position on Robinhood Chain</span></div>
+      <div class="legend"><span><i class="held"></i>Collateral</span><span><i class="owed"></i>Borrowed / used</span></div>
       <ul class="assets" id="assets"></ul>
+      <div class="wallet-bar"><span id="wallet-line">No wallet connected</span><button class="btn ghost sm" type="button" data-wallet>Connect wallet</button></div>
     </article>
 
     <div class="pair">
       <article class="panel att">
-        <header><h3>Agent top-ups, last 24 h</h3><small class="mono">1 / 24 hours</small></header>
+        <header><h3>Agent top-ups · 24 h</h3><small class="mono" id="tops-n">–</small></header>
         <div class="bars" id="bars"></div>
       </article>
       <article class="panel cold">
-        <header><h3>Locked vs. buffer</h3><small class="mono">by value</small></header>
-        <div class="split"><i style="width:84.6%"></i><i></i></div>
-        <div class="split-l mono"><span>84.6% <em>locked</em></span><span>15.4% <em>buffer</em></span></div>
+        <header><h3>Locked vs. buffer</h3><small class="mono" id="lb-scope">protocol</small></header>
+        <div class="split"><i id="split-l" style="width:100%"></i><i></i></div>
+        <div class="split-l mono"><span id="lb-locked">– <em>locked</em></span><span id="lb-buffer">– <em>buffer</em></span></div>
       </article>
     </div>
 
+    <article class="panel act" id="trade">
+      <header><h3>Your account</h3><small id="act-hint">Connect a wallet to start</small></header>
+      <div class="act-row">
+        <label class="field sel"><span>Collateral</span><select id="col-asset" aria-label="Collateral asset"></select></label>
+        <label class="field"><span>Amount</span><input id="col-amt" inputmode="decimal" placeholder="0.00" aria-label="Collateral amount"></label>
+        <button class="btn fire" type="button" data-act="dep">Deposit</button>
+        <button class="btn ghost" type="button" data-act="wd">Withdraw</button>
+      </div>
+      <div class="act-row">
+        <label class="field"><span id="usd-sym">USD</span><input id="usd-amt" inputmode="decimal" placeholder="0.00" aria-label="Dollar amount"></label>
+        <button class="btn fire" type="button" data-act="borrow">Borrow</button>
+        <button class="btn ghost" type="button" data-act="repay">Repay</button>
+      </div>
+      <div class="act-row">
+        <label class="field"><span>Buffer</span><input id="buf-eth" inputmode="decimal" placeholder="0.00 ETH" aria-label="Buffer ETH amount"></label>
+        <button class="btn ghost" type="button" data-act="buf-in">Add buffer</button>
+        <button class="btn ghost" type="button" data-act="buf-out">Take back</button>
+      </div>
+      <div class="act-row">
+        <label class="field"><span>Lend</span><input id="lend-amt" inputmode="decimal" placeholder="0.00" aria-label="Amount to lend"></label>
+        <button class="btn ghost" type="button" data-act="lend-in">Supply</button>
+        <button class="btn ghost" type="button" data-act="lend-out">Withdraw</button>
+      </div>
+      <p class="act-foot" id="act-foot"></p>
+    </article>
+
     <article class="panel verify">
       <form id="verify" autocomplete="off">
-        <label class="field"><span>Intent</span><input id="cid" value="Protect NVDA if SOL drops 10%" spellcheck="false" aria-label="Intent for the agent"></label>
-        <button class="btn fire" type="submit">Send to agent</button>
+        <label class="field"><span>Intent</span><input id="cid" value="Protect my account with 0.05 ETH" spellcheck="false" aria-label="Intent for the agent"></label>
+        <button class="btn fire" type="submit">Plan it</button>
       </form>
       <div class="result" id="result" role="status">
-        <span class="tick"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="m2.5 6.3 2.3 2.2 4.7-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-        <p id="result-t">If <b>SOL &lt; $132.40</b>, move 6,100 USDC from Base to your NVDA position via <code>LayerZero</code>, signed by session key 0x4c1e…a92b.</p>
+        <span class="tick"></span>
+        <p id="result-t">Type what you want: <b>"Deposit 0.1 ETH"</b>, <b>"Borrow $50"</b>, <b>"Protect my account with 0.05 ETH"</b>, <b>"Repay all"</b>, <b>"Revoke the agent"</b>.</p>
+        <button class="btn fire sm" type="button" id="result-go" hidden>Sign</button>
       </div>
     </article>
   </div>
@@ -157,6 +185,7 @@
 </footer>
 
 <script type="importmap">{ "imports": { "three": "./assets/vendor/three/three.module.min.js", "three/addons/": "./assets/vendor/three/addons/" } }</script>
+<script src="assets/vendor/ethers-6.13.4.umd.min.js" defer></script>
 <script src="assets/app.js" defer></script>
 <script src="assets/site.js" defer></script>
 <script type="module" src="assets/cube3d.js"></script>

@@ -1,62 +1,30 @@
 # kryonark
 
-The engine behind [kryonark.xyz](https://kryonark.xyz): omnichain collateral for tokenized stocks on Robinhood Chain.
-Health factors, the liquidation guard and plain-language intents, as a tiny library and a CLI. No dependencies, Node 18+.
+Read the live [Kryonark](https://kryonark.xyz) vault on Robinhood Chain: collateral, debt, health and the guardian agent. CLI and library, no dependencies, Node 18+.
 
-```bash
-npx kryonark
+```sh
+npx kryonark                      # protocol totals, prices and the agent
+npx kryonark account 0xYourAddr   # collateral, debt, buffer, guardian and health
+npx kryonark agent                # the agent's heartbeat
+npx kryonark --json               # machine-readable
 ```
-
-```
-Kryonark · example book  (live prices, LT 0.8)
-collateral                      position        health
-412.5 SOL on Solana      $29,341   NVDA $12,900    1.82×
-48,000 USDC on Base      $48,000   AAPL $18,290    2.10×
-0.62 BTC on Bitcoin      $37,560   AMZN $18,320    1.64×
-14.2 ETH on Arbitrum     $24,086   TSLA $10,090    1.91×
-────────────────────────────────────────────────────────
-book health 1.87×  liquidation at 1.00 · agent guards below 1.30
-```
-
-## CLI
-
-| Command | What it does |
-|---|---|
-| `kryonark` | The example book at live prices, with each position's health |
-| `kryonark plan "Protect NVDA if SOL drops 10%"` | What the AI agent would do (English or Indonesian) |
-| `kryonark prices` | Live SOL, BTC and ETH spot (Coinbase) |
-| `--json` | Machine-readable output for any command |
-
-## Library
 
 ```js
-import { spotPrices, exampleBook, health, bookHealth, plan } from "kryonark";
+import { protocol, account, health, borrowable } from "kryonark";
 
-const prices = await spotPrices();              // { USDC: 1, SOL: …, BTC: …, ETH: … }
-const book = exampleBook(prices);               // collateral on its home chain, stock positions on Robinhood Chain
-
-health(book[0], prices);                        // 1.82  (collateral × 0.8 ÷ position)
-bookHealth(book, prices);                       // the whole book
-
-plan("Protect NVDA if SOL drops 10%", book, prices);
-// { ok: true, kind: "protect", trigger: 64.02, usdc: 3000, text: "If SOL < $64.02, move 3,000 USDC from Base to your NVDA position …" }
+const p = await protocol();               // live from the chain
+const a = await account("0x…");           // { collateral, debt, health, status, borrowable, guardian }
+health([{ amount: 1, usd: 3000, weight: 0.8 }], 1500); // 1.6
 ```
 
-| Export | |
-|---|---|
-| `health(position, prices, lt?)` | Collateral value × LT ÷ position value |
-| `bookHealth(book, prices, lt?)` | Same, across every position |
-| `status(h)` | `"safe"`, `"guard"` (below 1.30, the agent acts) or `"liquidatable"` (below 1.00) |
-| `topUpNeeded(position, prices, target, price?)` | USDC needed to bring a position back to `target` if its collateral trades at `price` |
-| `plan(intent, book, prices)` | Plain-language intent to an agent plan: protect, close, rotate yield |
-| `spotPrices(assets?)` | Live USD spot from Coinbase (public, no key); USDC pinned at 1 |
-| `exampleBook(prices)` / `EXAMPLE` | The example book shown on kryonark.xyz |
-| `LT`, `LIQUIDATION`, `GUARD` | 0.8, 1.0, 1.3 |
+## How Kryonark works
 
-Intents it understands: `Protect <STOCK> if <ASSET> drops <N>%` (also `Lindungi … kalau … turun …%`), `Close <STOCK>`, `Rotate yield to USDC`.
+Deposit ETH and Robinhood Stock Tokens as collateral and borrow dollars against them. **Health = Σ(value × weight) ÷ debt**; ETH counts 80%, Stock Tokens 70%. Borrowing and withdrawing must leave health at 1.25 or more, and below 1.00 an account can be liquidated.
 
-## Note
+You can appoint a guardian agent. The vault lets it do one thing: move your own ETH buffer into your collateral while health is below 1.30. It can't withdraw, borrow or touch anything else.
 
-This is the engine's maths and intent layer. It does not hold keys, sign or send transactions. The book is an example; prices are live.
+Contract addresses and listed assets are read from `https://kryonark.xyz/assets/network.json`; set `KRYONARK_NETWORK` to use another config.
 
-MIT · [kryonark.xyz](https://kryonark.xyz) · [GitHub](https://github.com/kryonark/kryonark)
+Not for US persons (Robinhood Stock Tokens may not be offered to them). The contracts are open source with tests but not externally audited yet; see [kryonark.xyz/security](https://kryonark.xyz/security).
+
+MIT · [github.com/kryonark/kryonark](https://github.com/kryonark/kryonark)

@@ -1,14 +1,17 @@
-export interface Position { asset: string; qty: number; pos: number; stock?: string; chain?: string; target?: number }
-export type Prices = Record<string, number>;
-export const LT: number;
+export const NETWORK_URL: string;
+export const OPEN_HEALTH: number;
+export const GUARD_HEALTH: number;
 export const LIQUIDATION: number;
-export const GUARD: number;
-export function health(p: Position, prices: Prices, lt?: number): number;
-export function bookHealth(book: Position[], prices: Prices, lt?: number): number;
-export function status(h: number): "safe" | "guard" | "liquidatable";
-export function topUpNeeded(p: Position, prices: Prices, target: number, price?: number, lt?: number): number;
-export const EXAMPLE: Array<Omit<Position, "pos"> & { stock: string; chain: string; target: number }>;
-export function exampleBook(prices: Prices, lt?: number): Array<Position & { stock: string; chain: string; target: number }>;
-export function spotPrices(assets?: string[], opts?: { timeout?: number }): Promise<Prices>;
-export interface Plan { ok: boolean; kind: "protect" | "close" | "rotate" | "unknown"; text: string; [k: string]: unknown }
-export function plan(intent: string, book: Position[], prices: Prices): Plan;
+export interface CollateralLine { amount: number; usd: number; weight: number; symbol?: string }
+export function health(collateral: CollateralLine[], debtUsd: number): number;
+export function borrowable(collateral: CollateralLine[], debtUsd: number): number;
+export function status(health: number): "liquidatable" | "guard" | "safe";
+export function encodeAddress(address: string): string;
+export function words(hex: string): bigint[];
+export function network(url?: string): Promise<any>;
+export interface Asset { symbol: string; name: string; address: string; weight: number; deposited: number; cap: number; usd: number; priceAt: number; priceOk: boolean }
+export interface Protocol { network: string; chainId: number; vault: string; oracle: string; paused: boolean; apr: number; lendPool: { symbol: string; cash: number; borrowed: number }; buffer: number; assets: Asset[]; depositedUsd: number; borrowedUsd: number }
+export function protocol(opts?: { network?: any }): Promise<Protocol>;
+export interface Account { address: string; collateral: (CollateralLine & { symbol: string })[]; debt: number; debtSymbol: string; debtUsd: number; buffer: number; guardian: { agent: string; expiry: string } | null; health: number; status: string; borrowable: number }
+export function account(address: string, opts?: { network?: any }): Promise<Account>;
+export function agent(url?: string): Promise<any>;

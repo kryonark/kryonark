@@ -1,55 +1,32 @@
 #!/usr/bin/env node
-// kryonark CLI · the kryonark.xyz engine in your terminal
-//   kryonark                       live example book: collateral, positions, health
-//   kryonark plan "<intent>"       what the agent would do
-//   kryonark prices                live SOL, BTC, ETH spot
-//   add --json for machine-readable output
-import { spotPrices, exampleBook, health, bookHealth, status, plan, LT } from "../src/index.mjs";
-
-const args = process.argv.slice(2);
-const json = args.includes("--json");
-const rest = args.filter((a) => a !== "--json");
-const cmd = rest[0] || "book";
-const tty = process.stdout.isTTY && !json;
-const c = (code, s) => (tty ? `\x1b[${code}m${s}\x1b[0m` : s);
-const usd = (n) => "$" + n.toLocaleString("en-US", { maximumFractionDigits: n < 10 ? 4 : 0 });
-
-async function main() {
-  if (cmd === "help" || cmd === "-h" || cmd === "--help") {
-    console.log(`kryonark · omnichain collateral for tokenized stocks on Robinhood Chain
-
-  kryonark                      live example book with health factors
-  kryonark plan "<intent>"      e.g. kryonark plan "Protect NVDA if SOL drops 10%"
-  kryonark prices               live SOL, BTC, ETH spot (Coinbase)
-  --json                        machine-readable output
-
-https://kryonark.xyz`);
-    return;
+// npx kryonark                    protocol totals, prices and the agent, live from Robinhood Chain
+// npx kryonark account 0x…        one account's collateral, debt and health
+// npx kryonark agent              the agent's heartbeat
+// add --json for machine-readable output
+import { protocol, account, agent } from "../src/index.mjs";
+const args = process.argv.slice(2), json = args.includes("--json"), [cmd, arg] = args.filter((a) => !a.startsWith("--"));
+const usd = (n) => "$" + n.toLocaleString("en-US", { maximumFractionDigits: 2 });
+const h = (x) => (isFinite(x) ? x.toFixed(2) : "∞");
+const out = (o, text) => console.log(json ? JSON.stringify(o, null, 2) : text);
+try {
+  if (cmd === "account") {
+    if (!arg) throw new Error("usage: npx kryonark account 0xAddress");
+    const a = await account(arg);
+    out(a, [`${a.address}`, ...a.collateral.map((c) => `  ${c.amount} ${c.symbol}  ${usd(c.amount * c.usd)}  (counts ${Math.round(c.weight * 100)}%)`),
+      `  debt     ${a.debt.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${a.debtSymbol}`, `  buffer   ${a.buffer} ETH`,
+      `  guardian ${a.guardian ? a.guardian.agent + " until " + a.guardian.expiry.slice(0, 10) : "none"}`,
+      `  health   ${h(a.health)} (${a.status})   can borrow ${usd(a.borrowable)} more`].join("\n"));
+  } else if (cmd === "agent") {
+    const s = await agent();
+    out(s, `agent ${s.agent} · ${s.online ? "online" : "offline"} · ${s.checks24h ?? 0} checks in 24 h · ${s.guarded ?? 0} accounts guarded · ${(s.actions || []).length} recent top-ups`);
+  } else {
+    const p = await protocol();
+    let s = null; try { s = await agent(); } catch {}
+    out({ ...p, agent: s && { online: s.online, checks24h: s.checks24h, guarded: s.guarded } }, [
+      `Kryonark on ${p.network}${p.paused ? " (paused)" : ""} · vault ${p.vault}`,
+      ...p.assets.map((a) => `  ${a.symbol.padEnd(5)} ${usd(a.usd).padStart(11)}   ${a.deposited} deposited   counts ${Math.round(a.weight * 100)}%${a.priceOk ? "" : "   price stale"}`),
+      `  ${p.lendPool.symbol} pool: ${p.lendPool.cash.toLocaleString("en-US")} available, ${p.lendPool.borrowed.toLocaleString("en-US")} borrowed at ${p.apr}% a year`,
+      `  deposited ${usd(p.depositedUsd)} · borrowed ${usd(p.borrowedUsd)}`,
+      `  agent: ${s ? (s.online ? `online, ${s.checks24h} checks in 24 h, ${s.guarded} accounts guarded` : "offline") : "unreachable"}`].join("\n"));
   }
-  const prices = await spotPrices();
-  if (cmd === "prices") {
-    if (json) return console.log(JSON.stringify(prices));
-    for (const [a, v] of Object.entries(prices)) console.log(`${a.padEnd(5)} ${usd(v)}`);
-    return;
-  }
-  const book = exampleBook(prices);
-  if (cmd === "plan") {
-    const r = plan(rest.slice(1).join(" "), book, prices);
-    if (json) return console.log(JSON.stringify(r));
-    console.log((r.ok ? c(32, "✓ ") : c(31, "✗ ")) + r.text);
-    process.exitCode = r.ok ? 0 : 1;
-    return;
-  }
-  const rows = book.map((p) => ({ ...p, collateral: p.qty * prices[p.asset], health: health(p, prices) }));
-  if (json) return console.log(JSON.stringify({ lt: LT, prices, book: rows, health: bookHealth(book, prices) }));
-  console.log(c(1, "Kryonark · example book") + c(90, `  (live prices, LT ${LT})`));
-  console.log(c(90, "collateral                      position        health"));
-  for (const r of rows) {
-    const h = r.health.toFixed(2) + "×", col = status(r.health) === "safe" ? 32 : status(r.health) === "guard" ? 33 : 31;
-    console.log(`${(r.qty.toLocaleString("en-US") + " " + r.asset + " on " + r.chain).padEnd(24)}${usd(r.collateral).padStart(8)}   ${(r.stock + " " + usd(r.pos)).padEnd(14)}  ${c(col, h)}`);
-  }
-  const b = bookHealth(book, prices);
-  console.log(c(90, "─".repeat(56)));
-  console.log(`book health ${c(1, b.toFixed(2) + "×")}  ${c(90, "liquidation at 1.00 · agent guards below 1.30")}`);
-}
-main().catch((e) => { console.error(c(31, "kryonark: ") + (e.message || e)); process.exit(1); });
+} catch (e) { console.error("kryonark: " + e.message); process.exit(1); }

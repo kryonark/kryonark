@@ -1,32 +1,12 @@
-// Kryonark · shared bits for every page: the "Connect wallet" panel and the footer year.
+// Kryonark · shared bits for every page: Connect wallet, the footer year, the X toast and the phone menu.
 (() => {
-  const html = `
-  <div class="modal" id="connect" role="dialog" aria-modal="true" aria-labelledby="connect-h" hidden>
-    <div class="modal-card">
-      <button class="modal-x" type="button" aria-label="Close" data-close>×</button>
-      <span class="eyebrow">Preview</span>
-      <h3 id="connect-h">Wallet connect opens with the vaults</h3>
-      <p>Kryonark is in preview. The vault contracts go to Robinhood Chain testnet next; until then nothing on this site asks for a wallet, a signature or funds.</p>
-      <p>What works today:</p>
-      <ul>
-        <li><a href="/#engine">The engine preview</a>: live prices, health factors, the agent's intent box</li>
-        <li><code>npx kryonark</code>: the same engine in your terminal</li>
-        <li><a href="/docs">Docs</a> and <a href="/security">the security model</a></li>
-      </ul>
-      <div class="modal-row">
-        <a class="btn fire" href="/#engine" data-close>Try the engine</a>
-        <a class="btn ghost" href="https://github.com/kryonark/kryonark" target="_blank" rel="noopener">GitHub</a>
-      </div>
-    </div>
-  </div>`;
-  document.body.insertAdjacentHTML("beforeend", html);
-  const m = document.getElementById("connect");
-  let last = null;
-  const open = () => { last = document.activeElement; m.hidden = false; requestAnimationFrame(() => m.classList.add("in")); m.querySelector("[data-close]").focus(); };
-  const close = () => { m.classList.remove("in"); setTimeout(() => (m.hidden = true), 180); last?.focus?.(); };
+  // "Connect wallet": on the home page it opens the real wallet connection (app.js); elsewhere it goes there and connects.
+  const open = () => {
+    if (window.kryonarkConnect) { document.getElementById("engine")?.scrollIntoView({ behavior: "smooth" }); window.kryonarkConnect(); }
+    else location.href = "/#connect";
+  };
   document.querySelectorAll("[data-connect]").forEach((b) => b.addEventListener("click", open));
-  m.addEventListener("click", (e) => { if (e.target === m || e.target.closest("[data-close]")) close(); });
-  addEventListener("keydown", (e) => { if (e.key === "Escape" && !m.hidden) close(); });
+  if (location.hash === "#connect") addEventListener("load", () => setTimeout(() => { history.replaceState(null, "", "/#engine"); open(); }, 400));
   document.querySelectorAll("[data-year]").forEach((n) => (n.textContent = new Date().getFullYear()));
 
   // ---- X: the account isn't live yet. When it is, replace the <span data-x> with <a class="soc" href="https://x.com/…">.

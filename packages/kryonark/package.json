@@ -1,18 +1,47 @@
 {
   "name": "kryonark",
-  "version": "0.1.0",
-  "description": "Kryonark engine: omnichain collateral health, liquidation guard and plain-language intents for tokenized stocks on Robinhood Chain.",
+  "version": "0.2.0",
+  "description": "Read the live Kryonark vault on Robinhood Chain: collateral, debt, health and the guardian agent. CLI and library, no dependencies.",
   "type": "module",
-  "exports": { ".": "./src/index.mjs" },
+  "exports": {
+    ".": "./src/index.mjs"
+  },
   "main": "./src/index.mjs",
   "types": "./src/index.d.ts",
-  "bin": { "kryonark": "bin/kryonark.mjs" },
-  "files": ["src", "bin", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test" },
-  "keywords": ["kryonark", "robinhood-chain", "omnichain", "collateral", "tokenized-stocks", "rwa", "defi", "ai-agent", "liquidation", "health-factor"],
+  "bin": {
+    "kryonark": "bin/kryonark.mjs"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "kryonark",
+    "robinhood-chain",
+    "stock-tokens",
+    "collateral",
+    "lending",
+    "health-factor",
+    "liquidation",
+    "defi",
+    "agent"
+  ],
   "homepage": "https://kryonark.xyz",
-  "repository": { "type": "git", "url": "git+https://github.com/kryonark/kryonark.git", "directory": "packages/kryonark" },
-  "bugs": { "url": "https://github.com/kryonark/kryonark/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kryonark/kryonark.git",
+    "directory": "packages/kryonark"
+  },
+  "bugs": {
+    "url": "https://github.com/kryonark/kryonark/issues"
+  },
   "license": "MIT"
 }

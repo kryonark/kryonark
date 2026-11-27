@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Docs · Kryonark</title>
-<meta name="description" content="Kryonark docs: how omnichain collateral works, the health factor, the AI agent and its intents, the kryonark npm package and CLI, and the public token API.">
+<meta name="description" content="Kryonark docs: deposit ETH and Stock Tokens, borrow against them, the health factor, the guardian agent, intents, contracts, the npm package and the public APIs.">
 <meta name="theme-color" content="#060910">
 <link rel="canonical" href="https://kryonark.xyz/docs">
 <meta property="og:title" content="Docs · Kryonark">
-<meta property="og:description" content="How Kryonark works, the health factor, intents, and npx kryonark.">
+<meta property="og:description" content="How Kryonark works: collateral, borrowing, health, the guardian agent and the contracts.">
 <meta property="og:image" content="https://kryonark.xyz/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.ico?v=2" sizes="any">
@@ -27,7 +27,7 @@
     <ul class="links">
       <li><a href="/">Collateral</a></li>
       <li><a href="/#engine">Positions</a></li>
-      <li><a href="/#agent">AI agent</a></li>
+      <li><a href="/#agent">Agent</a></li>
       <li><a href="/security">Security</a></li>
       <li><a class="on" href="/docs">Docs</a></li>
     </ul>
@@ -45,18 +45,19 @@
   <div class="page-head wrap">
     <span class="eyebrow">Docs</span>
     <h1>How Kryonark<br><span>works.</span></h1>
-    <p>Lock collateral on the chain where it lives, open a tokenized stock position on Robinhood Chain in one signature, and let an AI agent keep it healthy. This page covers the model, the maths, the agent and the tools.</p>
+    <p>Deposit ETH and Robinhood Stock Tokens, borrow dollars against them without selling, and appoint an agent that keeps your account healthy. Everything below matches the contracts that run on Robinhood Chain.</p>
   </div>
 </header>
 
 <main class="doc wrap">
   <aside class="toc" aria-label="On this page">
     <a href="#overview">Overview</a>
-    <a href="#flow">Opening a position</a>
+    <a href="#start">Getting started</a>
     <a href="#health">Health factor</a>
-    <a href="#agent">The AI agent</a>
+    <a href="#agent">The guardian agent</a>
     <a href="#intents">Intents</a>
-    <a href="#chains">Chains and assets</a>
+    <a href="#lend">Lending</a>
+    <a href="#contracts">Contracts and parameters</a>
     <a href="#npm">npm package and CLI</a>
     <a href="#api">Public API</a>
     <a href="#faq">FAQ</a>
@@ -65,103 +66,115 @@
   <div class="doc-body">
     <section id="overview">
       <h2>Overview</h2>
-      <p>Tokenized stocks live on <b>Robinhood Chain</b>. Most crypto lives somewhere else: SOL on Solana, BTC on Bitcoin, USDC on Base and Arbitrum. Kryonark lets that crypto back stock positions without moving it.</p>
       <div class="cards">
-        <div class="card"><h4><i></i>Any chain in</h4><p>Collateral from Solana, Bitcoin, Ethereum, Base, Arbitrum, Optimism, Polygon and Robinhood Chain.</p></div>
-        <div class="card"><h4><i></i>Stocks out</h4><p>Positions in tokenized stocks such as NVDA, AAPL, AMZN and TSLA on Robinhood Chain.</p></div>
-        <div class="card"><h4><i></i>One signature</h4><p>An intent-based flow locks, messages and opens in one step. No manual bridging.</p></div>
-        <div class="card"><h4><i></i>Guarded every block</h4><p>An AI agent watches health and tops up before liquidation.</p></div>
+        <div class="card"><h4><i></i>Collateral</h4><p>ETH and Robinhood Stock Tokens, held by the vault contract in your name.</p></div>
+        <div class="card"><h4><i></i>Borrow</h4><p>Dollars (<span data-net="usd">USDG</span>) against that collateral, at a simple yearly rate.</p></div>
+        <div class="card"><h4><i></i>Guardian</h4><p>An agent you appoint can move your ETH buffer into collateral. Nothing else.</p></div>
+        <div class="card"><h4><i></i>Exit anytime</h4><p>Repay and withdraw whenever you like, even if new deposits are paused.</p></div>
       </div>
     </section>
 
-    <section id="flow">
-      <h2>Opening a position</h2>
+    <section id="start">
+      <h2>Getting started</h2>
       <ol>
-        <li><b>Sign once</b> on the chain that holds your collateral, for example 400 SOL on Solana against an NVDA position.</li>
-        <li>The <b>vault on the home chain locks</b> the collateral.</li>
-        <li>A <b>cross-chain message</b> (LayerZero V2) carries the lock proof to Robinhood Chain.</li>
-        <li>Robinhood Chain <b>opens the stock position</b>, sized so that health starts above the guard line.</li>
-        <li>The <b>agent starts watching</b>. Close any time: repay on Robinhood Chain, collateral unlocks at home.</li>
+        <li><b>Connect a wallet</b> (MetaMask, Rabby, Coinbase Wallet, anything EIP-1193) on the home page. The site switches it to <span data-net="chain">Robinhood Chain</span>.</li>
+        <li><b>Deposit collateral</b>: ETH, or a Stock Token you hold (the first deposit of a token asks for an approval).</li>
+        <li><b>Borrow</b> up to the point where your health stays at or above <code>1.25</code>.</li>
+        <li><b>Optional, protect it</b>: add an ETH buffer and appoint the Kryonark agent (30 days, revocable).</li>
+        <li><b>Repay and withdraw</b> whenever you want. Repaying all of it clears the debt, including interest to that block.</li>
       </ol>
+      <p data-testnet hidden>On testnet: the account panel has a faucet button for test dollars, and <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noopener">Robinhood's faucet</a> gives test ETH and Stock Tokens.</p>
     </section>
 
     <section id="health">
       <h2>Health factor</h2>
-      <pre><code>health = collateral value × 0.8 ÷ position value</code></pre>
+      <p><b>Health = Σ (collateral value × its weight) ÷ debt value.</b> ETH counts 80% of its value, Stock Tokens 70%. Below <code>1.00</code> the account can be liquidated; borrowing or withdrawing must leave it at <code>1.25</code> or more; the agent acts below <code>1.30</code>.</p>
       <table>
-        <tr><th>Health</th><th>State</th><th>What happens</th></tr>
-        <tr><td>≥ 1.30</td><td>Safe</td><td>Nothing; the agent keeps watching</td></tr>
-        <tr><td>1.00 – 1.30</td><td>Guard</td><td>The agent tops up from your buffer</td></tr>
-        <tr><td>&lt; 1.00</td><td>Liquidatable</td><td>The position can be liquidated</td></tr>
+        <tr><th></th><th>Value</th><th>Counts</th></tr>
+        <tr><td>1 ETH at $3,000</td><td>$3,000</td><td>$2,400</td></tr>
+        <tr><td>10 TSLA at $388</td><td>$3,880</td><td>$2,716</td></tr>
+        <tr><td>Borrowed</td><td>$3,000</td><td></td></tr>
+        <tr><td><b>Health</b></td><td colspan="2">($2,400 + $2,716) ÷ $3,000 = <b>1.71</b></td></tr>
       </table>
-      <p>Example: 412.5 SOL at $147 is $60,638. At a 0.8 threshold that counts as $48,510. Against a $26,650 NVDA position, health is <b>1.82</b>. If SOL fell 10%, health would drop to 1.64 and still be safe.</p>
+      <p>If ETH falls 20% to $2,400, ETH counts $1,920 and health becomes ($1,920 + $2,716) ÷ $3,000 = <b>1.55</b>. The most this account could borrow is $5,116 ÷ 1.25 = $4,092.</p>
+      <h3>Liquidation</h3>
+      <p>When health is below 1.00 anyone can repay up to half the debt (all of it under $100) and receive collateral of their choice worth 5% more than they repaid.</p>
     </section>
 
     <section id="agent">
-      <h2>The AI agent</h2>
-      <p>The agent reads prices for both sides of every position each block. When a position nears the guard line, it moves USDC from the buffer you allowed into that position, then posts the action to your history.</p>
-      <p>It signs with a <b>session key</b> that can only add collateral to your own positions. See <a href="/security#agent">Security → Agent session key</a> for the full scope.</p>
+      <h2>The guardian agent</h2>
+      <p>You appoint an address as your guardian with <code>setGuardian(agent, days)</code> (up to 90 days; <code>setGuardian(0x0, 0)</code> revokes). The vault lets that address call exactly one function, <code>guardTopUp</code>, which moves ETH from your buffer into your collateral, and only while your health is below 1.30.</p>
+      <p>The Kryonark agent runs around the clock: it reads every account's health from the chain every few seconds and tops up to about 1.50, limited by your buffer. Its live status, including every top-up in the last 24 hours, is on the home page and at <code>/agent/api/status</code>.</p>
+      <p>If the agent is offline, nothing happens to your account: you can still add collateral, repay or withdraw yourself.</p>
     </section>
 
     <section id="intents">
       <h2>Intents</h2>
-      <p>Tell the agent what you want in plain words, in English or Indonesian. Try them in the <a href="/#agent">intent box on the home page</a> or with the CLI.</p>
+      <p>The intent box turns a sentence (English or Indonesian) into the matching contract call, shows it, and asks your wallet to sign. It never signs anything itself.</p>
       <table>
-        <tr><th>Intent</th><th>Plan</th></tr>
-        <tr><td><code>Protect NVDA if SOL drops 10%</code></td><td>Trigger price for SOL and the USDC top-up that keeps NVDA at today's health</td></tr>
-        <tr><td><code>Lindungi AAPL kalau USDC turun 5%</code></td><td>Same, in Indonesian</td></tr>
-        <tr><td><code>Close TSLA</code></td><td>Repay on Robinhood Chain, unlock the ETH on Arbitrum</td></tr>
-        <tr><td><code>Rotate yield to USDC</code></td><td>Weekly sweep of stock-vault yield into the USDC buffer</td></tr>
+        <tr><th>You type</th><th>It prepares</th></tr>
+        <tr><td><code>Deposit 0.5 ETH</code> · <code>Setor 2 TSLA</code></td><td><code>depositEth</code> / <code>deposit</code></td></tr>
+        <tr><td><code>Borrow $200</code> · <code>Pinjam 200 USD</code></td><td><code>borrow</code>, with the health after</td></tr>
+        <tr><td><code>Repay all</code> · <code>Bayar $50</code></td><td><code>repay</code></td></tr>
+        <tr><td><code>Protect my account with 0.05 ETH</code></td><td><code>depositBuffer</code> + <code>setGuardian</code></td></tr>
+        <tr><td><code>Withdraw 1 TSLA</code> · <code>Revoke the agent</code></td><td><code>withdraw</code> / <code>setGuardian(0x0)</code></td></tr>
       </table>
     </section>
 
-    <section id="chains">
-      <h2>Chains and assets</h2>
-      <table>
-        <tr><th>Role</th><th>Chains and assets</th></tr>
-        <tr><td>Collateral</td><td>SOL (Solana), BTC (Bitcoin), USDC (Base), ETH (Arbitrum, Ethereum), plus Optimism, Polygon and Robinhood Chain</td></tr>
-        <tr><td>Positions</td><td>Tokenized stocks on Robinhood Chain (NVDA, AAPL, AMZN, TSLA in the example book)</td></tr>
-        <tr><td>Prices</td><td>Chainlink feeds</td></tr>
-        <tr><td>Messaging</td><td>LayerZero V2, Across intents</td></tr>
-        <tr><td>Accounts</td><td>ERC-4337 smart accounts with session keys</td></tr>
+    <section id="lend">
+      <h2>Lending</h2>
+      <p>Borrowed dollars come from a pool anyone can supply. Suppliers receive shares of the pool's cash plus outstanding debt, so interest paid by borrowers accrues to them. Withdrawals are limited by the cash in the pool at that moment.</p>
+    </section>
+
+    <section id="contracts">
+      <h2>Contracts and parameters</h2>
+      <table id="addr-table">
+        <tr><th>Contract</th><th>Address</th></tr>
+        <tr><td>KryonarkVault</td><td><code data-addr="vault">loading…</code></td></tr>
+        <tr><td>KryoOracle</td><td><code data-addr="oracle">loading…</code></td></tr>
+        <tr><td>Debt asset</td><td><code data-addr="usd">loading…</code></td></tr>
       </table>
+      <table>
+        <tr><th>Parameter</th><th>Value</th></tr>
+        <tr><td>ETH weight / Stock Token weight</td><td>80% / 70%</td></tr>
+        <tr><td>Minimum health after borrow or withdraw</td><td>1.25</td></tr>
+        <tr><td>Agent acts below</td><td>1.30, aiming for 1.50</td></tr>
+        <tr><td>Liquidation</td><td>below 1.00, 5% bonus, up to 50% of the debt</td></tr>
+        <tr><td>Borrow rate</td><td>set on-chain (<code>aprBps</code>), max 50% a year</td></tr>
+        <tr><td>Prices</td><td>Chainlink on mainnet; on testnet (no Chainlink) the agent pushes Coinbase and Robinhood prices, each push capped at a 25% move</td></tr>
+      </table>
+      <p>Source and tests: <a href="https://github.com/kryonark/kryonark/tree/main/contracts" target="_blank" rel="noopener">github.com/kryonark/kryonark/contracts</a>.</p>
     </section>
 
     <section id="npm">
       <h2>npm package and CLI</h2>
-      <p>The engine's maths and intent layer is open source as <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener"><code>kryonark</code></a> on npm. No dependencies, Node 18+.</p>
-      <h3>CLI</h3>
-      <pre><code>npx kryonark                                     # example book at live prices
-npx kryonark plan "Protect NVDA if SOL drops 10%"  # what the agent would do
-npx kryonark prices                              # live SOL, BTC, ETH spot
-npx kryonark --json                              # machine-readable</code></pre>
-      <h3>Library</h3>
-      <pre><code>import { spotPrices, exampleBook, health, bookHealth, plan } from "kryonark";
-
-const prices = await spotPrices();
-const book = exampleBook(prices);
-health(book[0], prices);        // 1.82
-bookHealth(book, prices);       // the whole book
-plan("Close TSLA", book, prices);</code></pre>
-      <p>Source: <a href="https://github.com/kryonark/kryonark/tree/main/packages/kryonark" target="_blank" rel="noopener">github.com/kryonark/kryonark</a>.</p>
+      <p><a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener"><code>kryonark</code></a> on npm reads the live vault. No dependencies, Node 18+.</p>
+      <pre><code>npx kryonark                     # protocol totals, prices and the agent
+npx kryonark account 0xYourAddress # collateral, debt and health of an account
+npx kryonark --json              # machine-readable</code></pre>
+      <pre><code>import { protocol, account, health } from "kryonark";
+const p = await protocol();            // live from the chain
+const a = await account("0x…");        // { collateral, debt, health }</code></pre>
     </section>
 
     <section id="api">
       <h2>Public API</h2>
-      <h3><code>GET https://kryonark.xyz/studio/api/token</code></h3>
-      <p>The token's public details, set by the team. Before launch it returns <code>{"live": false}</code>.</p>
-      <pre><code>{ "live": true, "ca": "0x…", "symbol": "KRYO", "buy": "https://ponsfamily.com/launchpad/0x…",
-  "deadBalance": "…", "totals": { … }, "burns": [ … ] }</code></pre>
+      <h3><code>GET /assets/network.json</code></h3>
+      <p>Network, contract addresses and listed assets.</p>
+      <h3><code>GET /agent/api/status</code></h3>
+      <p>The agent's heartbeat: last check, checks in 24 hours, accounts guarded, prices it reads, and recent top-ups with transaction hashes.</p>
+      <h3><code>GET /studio/api/token</code></h3>
+      <p>The $KRYO token's public details once launched; <code>{"live": false}</code> before that.</p>
     </section>
 
     <section id="faq">
       <h2>FAQ</h2>
-      <h3>Can I use Kryonark today?</h3>
-      <p>The engine is live as a preview on the home page and as <code>npx kryonark</code>. Vault contracts go to Robinhood Chain testnet next; the site doesn't ask for a wallet until then.</p>
-      <h3>Is my collateral bridged?</h3>
-      <p>No. It's locked on its home chain; only a message crosses chains.</p>
+      <h3>Who can use Kryonark?</h3>
+      <p>Not US persons: Robinhood Stock Tokens may not be offered, sold or delivered in the United States or to US persons.</p>
+      <h3>Is it audited?</h3>
+      <p>Not yet. The contracts are open source with tests; see the <a href="/security">security page</a> for what that means for you.</p>
       <h3>What if the agent goes offline?</h3>
-      <p>Your position keeps its collateral and buffer. You can top up or close it yourself at any time.</p>
+      <p>Your account is unchanged. You can top up, repay or withdraw yourself at any time.</p>
       <h3>Where are the official links?</h3>
       <p>kryonark.xyz, <a href="https://github.com/kryonark" target="_blank" rel="noopener">github.com/kryonark</a> and the <code>kryonark</code> npm package.</p>
     </section>
@@ -181,5 +194,6 @@ plan("Close TSLA", book, prices);</code></pre>
 </footer>
 
 <script src="assets/site.js" defer></script>
+<script src="assets/net-info.js" defer></script>
 </body>
 </html>

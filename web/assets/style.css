@@ -414,3 +414,52 @@ button.btn { font: inherit; font-size: 13.5px; font-weight: 500; }
   .stats { height: auto; margin-top: 28px; }
   .stats > div { padding-bottom: 18px; }
 }
+
+/* ---------- live app: wallet, position form, buffer, wallet chooser ---------- */
+.reserves { height: auto; min-height: 0; padding-bottom: 18px; display: flex; flex-direction: column; }
+.reserves .assets { flex: 1; }
+.assets li.empty { display: block; height: auto; padding: 26px 0; font-size: 14px; color: var(--dim); }
+.ratio .warn { color: #ffb14a; }
+.ratio .warn i { background: #ffb14a; }
+.wallet-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; border-top: 1px solid var(--line); font: 400 12.5px/1.4 var(--mono); color: var(--dim); }
+.wallet-bar b { color: var(--fg); font-weight: 500; }
+.wallet-bar .btn { flex: none; }
+.act { padding: 22px 25px 22px; background: var(--panel-b); }
+.act header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.act header small { font: 400 12px/1.4 var(--mono); color: var(--dim); text-align: right; }
+.act-row { display: grid; grid-template-columns: 1fr 112px 112px; gap: 10px; margin-top: 10px; }
+.act-row:has(.sel) { grid-template-columns: 1.1fr 1fr 112px 112px; margin-top: 0; }
+.act-row .btn { height: 48px; padding: 0 10px; font-size: 13.5px; }
+.act-foot { margin: 14px 0 0; font: 400 12px/1.6 var(--mono); color: var(--dim); }
+.act-foot a { color: var(--fg); text-decoration: underline; text-decoration-color: rgba(255,255,255,.3); }
+.act-foot button { background: none; border: 0; padding: 0; color: var(--fg); font: inherit; text-decoration: underline; cursor: pointer; }
+.act-row .field { height: 48px; }
+.act-row .field input { font-size: 15px; }
+.field.sel select { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--fg); font: 500 15px/1 var(--mono); appearance: none; cursor: pointer; }
+.field.sel select option { background: #0c141e; }
+.verify { height: auto; padding-bottom: 22px; }
+.result { height: auto; min-height: 62px; padding: 12px 18px; }
+.result p { flex: 1; }
+.result #result-go { flex: none; height: 38px; padding: 0 18px; }
+.toast a { color: #fff; text-decoration: underline; }
+.wallets { display: grid; gap: 8px; margin-top: 14px; }
+.wallet { display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.03); color: var(--fg); font: 500 15px/1 var(--sans); cursor: pointer; text-align: left; }
+.wallet:hover { background: rgba(255, 255, 255, 0.07); }
+.wallet img { width: 28px; height: 28px; border-radius: 7px; }
+@media (max-width: 640px) {
+  .act-row, .act-row:has(.sel) { grid-template-columns: 1fr 1fr; }
+  .act-row .field { grid-column: 1 / -1; }
+  .wallet-bar { flex-direction: column; align-items: stretch; }
+  .result { flex-wrap: wrap; }
+}
+.callout.terms { padding: 16px 20px; border-radius: 14px; border: 1px solid rgba(255, 177, 74, 0.35); background: rgba(255, 177, 74, 0.07); font-size: 13.5px; line-height: 1.6; color: #d9e0e6; }
+.callout.terms b { color: #fff; }
+.callout.terms a { color: #fff; text-decoration: underline; }
+.att header { gap: 10px; }
+.att header h3 { white-space: nowrap; }
+.att header small { text-align: right; }
+.proof > *, .proof-r > *, .act-row > * { min-width: 0; }
+.act-row .field input, .field.sel select { min-width: 0; width: 100%; }
+.pair > * { min-width: 0; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } .att header h3 { white-space: normal; } }
+[hidden] { display: none !important; }

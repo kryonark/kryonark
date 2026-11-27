@@ -1,107 +1,82 @@
-// kryonark · the engine behind kryonark.xyz
-// Omnichain collateral for tokenized stocks on Robinhood Chain: health factors, the liquidation guard and plain-language intents.
-// No dependencies. Prices come from Coinbase spot (public, no key); everything else is pure functions you can test.
+// kryonark · read the live Kryonark vault on Robinhood Chain. No dependencies, Node 18+.
+// Network, contract addresses and listed assets come from https://kryonark.xyz/assets/network.json
+// (override with KRYONARK_NETWORK=<url> or pass { network } to each call).
 
-/** Liquidation threshold: collateral counts at 80% of its value. */
-export const LT = 0.8;
+export const NETWORK_URL = "https://kryonark.xyz/assets/network.json";
+export const OPEN_HEALTH = 1.25;   // minimum health after borrowing or withdrawing
+export const GUARD_HEALTH = 1.3;   // the guardian agent tops up below this
+export const LIQUIDATION = 1.0;    // below this an account can be liquidated
 
-/** Health below this is liquidatable. */
-export const LIQUIDATION = 1;
+/** Health = Σ(value × weight) ÷ debt. Infinity without debt. */
+export function health(collateral, debtUsd) {
+  const c = collateral.reduce((a, x) => a + x.amount * x.usd * x.weight, 0);
+  return debtUsd > 0 ? c / debtUsd : Infinity;
+}
+/** Dollars that can still be borrowed while staying at OPEN_HEALTH. */
+export function borrowable(collateral, debtUsd) {
+  return Math.max(0, collateral.reduce((a, x) => a + x.amount * x.usd * x.weight, 0) / OPEN_HEALTH - debtUsd);
+}
+export function status(h) { return h < LIQUIDATION ? "liquidatable" : h < GUARD_HEALTH ? "guard" : "safe"; }
 
-/** The agent tops a position up before it falls below this. */
-export const GUARD = 1.3;
+// ---- minimal ABI encoding for the handful of view calls we need
+const SEL = {
+  assets: "0xf11b8188", collateral: "0xcc218ece", debtOf: "0xd283e75f", healthOf: "0xb1fbbac9", buffer: "0x72e3ddaa", guardians: "0x0633b14a",
+  cash: "0x961be391", totalDebt: "0xfc7b9c18", totalBuffer: "0xec25cf34", aprBps: "0x25ac1df2", paused: "0x5c975abb", peek: "0xacefafae",
+};
+export const encodeAddress = (a) => { if (!/^0x[0-9a-fA-F]{40}$/.test(a)) throw new Error("bad address " + a); return a.slice(2).toLowerCase().padStart(64, "0"); };
+export const words = (hex) => (hex.slice(2).match(/.{64}/g) || []).map((w) => BigInt("0x" + w));
+const fmt = (x, d) => Number(x) / 10 ** d;
 
-/**
- * Health of one position: collateral value × LT ÷ position value.
- * @param {{ qty: number, asset: string, pos: number }} p
- * @param {Record<string, number>} prices  USD per unit, e.g. { SOL: 147.1, USDC: 1 }
- */
-export function health(p, prices, lt = LT) {
-  const px = prices[p.asset];
-  if (!(px > 0)) throw new Error(`No price for ${p.asset}`);
-  if (!(p.pos > 0)) throw new Error("Position value must be above 0");
-  return (p.qty * px * lt) / p.pos;
+let id = 0;
+async function call(rpc, to, data) {
+  const r = await fetch(rpc, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method: "eth_call", params: [{ to, data }, "latest"] }), signal: AbortSignal.timeout(15000) });
+  const j = await r.json(); if (j.error) throw new Error(j.error.message); return words(j.result);
 }
 
-/** Health of a whole book (all collateral against all positions). */
-export function bookHealth(book, prices, lt = LT) {
-  const coll = book.reduce((a, p) => a + p.qty * prices[p.asset] * lt, 0);
-  const pos = book.reduce((a, p) => a + p.pos, 0);
-  return coll / pos;
+export async function network(url = process.env.KRYONARK_NETWORK || NETWORK_URL) {
+  const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`network config ${r.status}`);
+  const n = await r.json(); if (!n.vault) throw new Error("the vault isn't deployed yet"); return n;
 }
 
-/** Status of a health value: "safe", "guard" (the agent would act) or "liquidatable". */
-export const status = (h) => (h < LIQUIDATION ? "liquidatable" : h < GUARD ? "guard" : "safe");
-
-/**
- * USDC the agent must add so a position is back at `target` health,
- * if its collateral asset trades at `price` (defaults to today's price).
- */
-export function topUpNeeded(p, prices, target, price = prices[p.asset], lt = LT) {
-  const coll = p.qty * price;
-  return Math.max(0, (target * p.pos) / lt - coll);
-}
-
-/** The example book shown on kryonark.xyz: collateral on its home chain, a stock position on Robinhood Chain. */
-export const EXAMPLE = [
-  { asset: "SOL", chain: "Solana", qty: 412.5, stock: "NVDA", target: 1.82 },
-  { asset: "USDC", chain: "Base", qty: 48000, stock: "AAPL", target: 2.1 },
-  { asset: "BTC", chain: "Bitcoin", qty: 0.62, stock: "AMZN", target: 1.64 },
-  { asset: "ETH", chain: "Arbitrum", qty: 14.2, stock: "TSLA", target: 1.91 },
-];
-
-/** Sizes the example positions from today's prices, so health starts at each row's target and then moves with the market. */
-export function exampleBook(prices, lt = LT) {
-  return EXAMPLE.map((r) => ({ ...r, pos: Math.round((r.qty * prices[r.asset] * lt) / r.target / 10) * 10 }));
-}
-
-/**
- * Live USD spot prices from Coinbase. USDC is pinned at 1.
- * @param {string[]} assets e.g. ["SOL", "BTC", "ETH"]
- */
-export async function spotPrices(assets = ["SOL", "BTC", "ETH"], { timeout = 8000 } = {}) {
-  const out = { USDC: 1 };
-  await Promise.all(assets.filter((a) => a !== "USDC").map(async (a) => {
-    const r = await fetch(`https://api.coinbase.com/v2/prices/${a}-USD/spot`, { signal: AbortSignal.timeout(timeout) });
-    if (!r.ok) throw new Error(`Coinbase ${a}: HTTP ${r.status}`);
-    const v = +(await r.json()).data.amount;
-    if (!(v > 0)) throw new Error(`Coinbase ${a}: bad price`);
-    out[a] = v;
+/** Protocol totals, prices and listed assets, live from the chain. */
+export async function protocol({ network: n } = {}) {
+  n ||= await network();
+  const v = n.vault, o = n.oracle, c = (to, d) => call(n.rpc, to, d);
+  const [[cash], [debt], [buf], [apr], [paused], usdPx] = await Promise.all([c(v, SEL.cash), c(v, SEL.totalDebt), c(v, SEL.totalBuffer), c(v, SEL.aprBps), c(v, SEL.paused), c(o, SEL.peek + encodeAddress(n.usd.address))]);
+  const assets = await Promise.all(n.collateral.map(async (a) => {
+    const [m, p] = await Promise.all([c(v, SEL.assets + encodeAddress(a.address)), c(o, SEL.peek + encodeAddress(a.address))]);
+    return { symbol: a.symbol, name: a.name, address: a.address, weight: Number(m[2]) / 1e4, deposited: fmt(m[4], a.decimals), cap: fmt(m[3], a.decimals), usd: fmt(p[0], 8), priceAt: Number(p[1]) * 1000, priceOk: p[2] === 1n };
   }));
-  return out;
+  const usd = fmt(usdPx[0], 8) || 1, d = n.usd.decimals;
+  return {
+    network: n.chainName, chainId: n.chainId, vault: v, oracle: o, paused: paused === 1n, apr: Number(apr) / 100,
+    lendPool: { symbol: n.usd.symbol, cash: fmt(cash, d), borrowed: fmt(debt, d) },
+    buffer: fmt(buf, 18), assets, depositedUsd: assets.reduce((a, x) => a + x.deposited * x.usd, 0), borrowedUsd: fmt(debt, d) * usd,
+  };
 }
 
-const money = (n) => "$" + n.toLocaleString("en-US", { maximumFractionDigits: n < 10 ? 4 : 2 });
+/** One account: collateral, debt, buffer, guardian and health, live from the chain. */
+export async function account(address, { network: n } = {}) {
+  n ||= await network();
+  const v = n.vault, A = encodeAddress(address), c = (d) => call(n.rpc, v, d);
+  const p = await protocol({ network: n });
+  const [[debt], [buf], g] = await Promise.all([c(SEL.debtOf + A), c(SEL.buffer + A), c(SEL.guardians + A)]);
+  const collateral = await Promise.all(n.collateral.map(async (a, i) => {
+    const [amt] = await c(SEL.collateral + A + encodeAddress(a.address));
+    return { symbol: a.symbol, amount: fmt(amt, a.decimals), usd: p.assets[i].usd, weight: p.assets[i].weight };
+  }));
+  const usdPx = p.borrowedUsd && p.lendPool.borrowed ? p.borrowedUsd / p.lendPool.borrowed : 1;
+  const debtUsd = fmt(debt, n.usd.decimals) * usdPx, h = health(collateral, debtUsd);
+  const agent = "0x" + g[0].toString(16).padStart(40, "0"), expiry = Number(g[1]) * 1000;
+  return {
+    address, collateral: collateral.filter((x) => x.amount > 0), debt: fmt(debt, n.usd.decimals), debtSymbol: n.usd.symbol, debtUsd,
+    buffer: fmt(buf, 18), guardian: /^0x0+$/.test(agent) || expiry < Date.now() ? null : { agent, expiry: new Date(expiry).toISOString() },
+    health: h, status: status(h), borrowable: borrowable(collateral, debtUsd),
+  };
+}
 
-/**
- * Turns a plain-language intent into the agent's plan. English and Indonesian.
- *   "Protect NVDA if SOL drops 10%"     → trigger price and the USDC top-up
- *   "Lindungi AAPL kalau USDC turun 5%" → same, in Indonesian
- *   "Close TSLA"                        → repay and unlock
- *   "Rotate yield to USDC"              → weekly yield sweep
- * @returns {{ ok: boolean, kind: string, text: string, [k: string]: any }}
- */
-export function plan(intent, book, prices) {
-  const t = String(intent).toUpperCase();
-  const stocks = Object.fromEntries(book.map((p) => [p.stock, p]));
-  const stock = Object.keys(stocks).find((s) => new RegExp(`\\b${s}\\b`).test(t));
-  const asset = [...new Set(book.map((p) => p.asset))].find((a) => new RegExp(`\\b${a}\\b`).test(t)) || (stock && stocks[stock].asset);
-  const pct = +(t.match(/(\d+(?:\.\d+)?)\s*%/) || [])[1];
-
-  if (/PROTECT|GUARD|SAFE|AMANKAN|LINDUNGI|JAGA/.test(t) && stock && asset && pct > 0 && pct < 90) {
-    const p = stocks[stock], trigger = prices[asset] * (1 - pct / 100);
-    const price = asset === p.asset ? trigger : prices[p.asset];
-    const usdc = Math.ceil(topUpNeeded(p, prices, health(p, prices), price) / 100) * 100;
-    return { ok: true, kind: "protect", stock, asset, trigger, usdc,
-      text: `If ${asset} < ${money(trigger)}, move ${usdc > 0 ? usdc.toLocaleString("en-US") : "no"} USDC from Base to your ${stock} position via LayerZero, signed by the agent's session key.` };
-  }
-  if (/CLOSE|TUTUP/.test(t) && stock) {
-    const p = stocks[stock];
-    return { ok: true, kind: "close", stock, repay: p.pos, unlock: p.qty, asset: p.asset,
-      text: `Close ${stock} on Robinhood Chain, repay ${money(p.pos)}, then unlock ${p.qty.toLocaleString("en-US")} ${p.asset} on ${p.chain} via LayerZero.` };
-  }
-  if (/YIELD|DIVIDEN|ROTATE|PUTAR/.test(t)) {
-    return { ok: true, kind: "rotate", text: "Every Friday 21:00 UTC, sweep stock-vault yield into USDC on Base and add it to the buffer. Session key scope: top-up and sweep only." };
-  }
-  return { ok: false, kind: "unknown", text: `Can't act on that yet. Try "Protect NVDA if SOL drops 10%", "Close TSLA" or "Rotate yield to USDC".` };
+/** The Kryonark agent's live heartbeat. */
+export async function agent(url = "https://kryonark.xyz/agent/api/status") {
+  const r = await fetch(url, { signal: AbortSignal.timeout(15000) }); if (!r.ok) throw new Error(`agent ${r.status}`); return r.json();
 }

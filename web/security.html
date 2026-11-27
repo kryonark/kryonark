@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Security · Kryonark</title>
-<meta name="description" content="How Kryonark keeps collateral safe: collateral stays on its home chain, the AI agent can only add collateral through a scoped session key, prices come from Chainlink, and every action is on-chain.">
+<meta name="description" content="Kryonark's security model and risks: what the vault, the oracle, the guardian agent and the owner can and can't do, and what isn't audited yet.">
 <meta name="theme-color" content="#060910">
 <link rel="canonical" href="https://kryonark.xyz/security">
 <meta property="og:title" content="Security · Kryonark">
-<meta property="og:description" content="Collateral stays home. The agent can add, never withdraw.">
+<meta property="og:description" content="The agent can add, never withdraw. What the contracts allow, and the risks.">
 <meta property="og:image" content="https://kryonark.xyz/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="favicon.ico?v=2" sizes="any">
@@ -27,7 +27,7 @@
     <ul class="links">
       <li><a href="/">Collateral</a></li>
       <li><a href="/#engine">Positions</a></li>
-      <li><a href="/#agent">AI agent</a></li>
+      <li><a href="/#agent">Agent</a></li>
       <li><a class="on" href="/security">Security</a></li>
       <li><a href="/docs">Docs</a></li>
     </ul>
@@ -45,17 +45,17 @@
   <div class="page-head wrap">
     <span class="eyebrow">Security</span>
     <h1>The agent can add.<br><span>It can't withdraw.</span></h1>
-    <p>Kryonark is built so that no single part can take your collateral: it stays on its home chain, the AI agent signs with a key that can only top up, and every price and every action is public on-chain.</p>
+    <p>What each part of Kryonark is allowed to do, enforced by the contracts rather than promised, and the risks that remain. Read this before you deposit.</p>
   </div>
 </header>
 
 <main class="doc wrap">
   <aside class="toc" aria-label="On this page">
     <a href="#principles">Principles</a>
-    <a href="#collateral">Collateral custody</a>
-    <a href="#agent">Agent session key</a>
+    <a href="#agent">Guardian agent</a>
     <a href="#prices">Prices and liquidation</a>
-    <a href="#messaging">Cross-chain messaging</a>
+    <a href="#owner">What the owner can do</a>
+    <a href="#risks">Risks</a>
     <a href="#site">This website</a>
     <a href="#status">Status and audits</a>
     <a href="#report">Report an issue</a>
@@ -65,60 +65,64 @@
     <section id="principles">
       <h2>Principles</h2>
       <div class="cards">
-        <div class="card"><h4><i></i>Collateral stays home</h4><p>SOL stays on Solana, BTC on Bitcoin, USDC on Base. Nothing is bridged by hand.</p></div>
-        <div class="card"><h4><i></i>Least authority</h4><p>The agent's key can add collateral and nothing else. It can't withdraw, trade or move funds out.</p></div>
-        <div class="card"><h4><i></i>Public prices</h4><p>Health factors use Chainlink feeds for both the collateral and the stock, the same numbers anyone can check.</p></div>
-        <div class="card"><h4><i></i>You can always leave</h4><p>Revoke the agent at any time. Closing a position repays the stock side and unlocks your collateral on its home chain.</p></div>
+        <div class="card"><h4><i></i>Your account, your keys</h4><p>Only your address can withdraw your collateral, borrow, or take back your buffer.</p></div>
+        <div class="card"><h4><i></i>Least authority</h4><p>The agent can call one function: move your own buffer into your own collateral.</p></div>
+        <div class="card"><h4><i></i>No bad-data actions</h4><p>A stale or missing price stops borrowing and liquidations instead of acting on it.</p></div>
+        <div class="card"><h4><i></i>You can always leave</h4><p>Pausing blocks new deposits and borrowing only. Repaying and withdrawing always work.</p></div>
       </div>
     </section>
 
-    <section id="collateral">
-      <h2>Collateral custody</h2>
-      <p>When you open a position, your collateral is <b>locked in a vault contract on the chain where it already lives</b>. A cross-chain message tells Robinhood Chain that the collateral is locked; only then is the stock position opened there.</p>
-      <ul>
-        <li>The vault on the home chain only releases collateral when Robinhood Chain confirms the position is repaid or closed.</li>
-        <li>No wrapped copy of your asset is minted, so there is no bridge pool holding everyone's funds.</li>
-        <li>Liquidations, if they ever happen, follow the same path in reverse and are visible on both chains.</li>
-      </ul>
-    </section>
-
     <section id="agent">
-      <h2>Agent session key</h2>
-      <p>The AI agent never holds your main wallet key. You grant it a <b>session key</b> (ERC-7715 style permissions on an ERC-4337 account) with a narrow scope:</p>
+      <h2>Guardian agent</h2>
       <table>
-        <tr><th>Permission</th><th>Allowed</th></tr>
-        <tr><td>Add collateral to your own position</td><td>Yes, from the buffer you set</td></tr>
-        <tr><td>Sweep yield into your buffer</td><td>Only if you enable it</td></tr>
-        <tr><td>Withdraw to any address</td><td>No</td></tr>
-        <tr><td>Open, close or trade positions</td><td>No, only you can</td></tr>
-        <tr><td>Exceed the buffer or the time limit</td><td>No (default 30 days, revoke anytime)</td></tr>
+        <tr><th>The agent can</th><th>Allowed</th></tr>
+        <tr><td>Move your ETH buffer into your collateral, while health is below 1.30</td><td>Yes, until the expiry you set</td></tr>
+        <tr><td>Withdraw collateral or buffer, to anyone</td><td>No</td></tr>
+        <tr><td>Borrow, repay, or touch other accounts</td><td>No</td></tr>
+        <tr><td>Act after you revoke it or after it expires</td><td>No (max 90 days, revoke anytime)</td></tr>
       </table>
-      <p>If the agent, its server or its model were compromised, the worst it could do is move your own buffer into your own position early.</p>
+      <p>If the agent's server or key were compromised, the worst it could do is move your buffer into your collateral early. That's still your ETH, in your account.</p>
     </section>
 
     <section id="prices">
       <h2>Prices and liquidation</h2>
-      <p><b>Health = collateral value × 0.8 ÷ position value.</b> Below <code>1.00</code> a position can be liquidated. The agent steps in below <code>1.30</code>, long before that.</p>
       <ul>
-        <li>Both sides are priced from Chainlink feeds on Robinhood Chain; stale or out-of-range prices pause new positions instead of liquidating on bad data.</li>
-        <li>Robinhood Chain blocks are about 100 ms, so the agent can react within the same minute as a market move.</li>
-        <li>Stock markets close; crypto doesn't. Weekend and overnight gaps are why the buffer and the guard threshold exist.</li>
+        <li><b>Mainnet:</b> every price comes from Chainlink feeds on Robinhood Chain, refused when older than its heartbeat.</li>
+        <li><b>Testnet:</b> Chainlink has no feeds there, so the agent pushes ETH (Coinbase) and Stock Token (Robinhood) prices. Each push can move a price at most 25%, and prices older than an hour are refused.</li>
+        <li>Liquidation needs health below 1.00. Liquidators repay at most half the debt and receive 5% extra collateral.</li>
+        <li>Stock markets close and crypto doesn't: weekend gaps are why borrowing stops at 1.25 and the agent steps in at 1.30.</li>
       </ul>
     </section>
 
-    <section id="messaging">
-      <h2>Cross-chain messaging</h2>
-      <p>Lock and unlock instructions travel through established messaging and intent layers (LayerZero V2, Across) rather than a custom bridge. Each message is verified on the destination chain before the vault acts on it.</p>
-      <p>Risk that remains: Kryonark depends on those layers and on the chains themselves. That risk is listed here rather than hidden.</p>
+    <section id="owner">
+      <h2>What the owner can do</h2>
+      <p>The owner key (the team's deployer today; a multisig with a timelock before meaningful deposits) can:</p>
+      <ul>
+        <li>list assets and set their weight (max 90%) and deposit caps; set the borrow rate (max 50% a year) and the borrow cap;</li>
+        <li>pause new deposits, borrowing and supplying (never repaying, withdrawing or exiting);</li>
+        <li>on the oracle: choose each asset's price feed and, for assets without a feed, set a price directly.</li>
+      </ul>
+      <p>The oracle powers are the most sensitive: a wrong feed or price could trigger liquidations. That's why the owner key moves to a multisig with a timelock, and why every change is an on-chain event anyone can watch. The owner can't withdraw or move anyone's collateral, buffer or deposits.</p>
+    </section>
+
+    <section id="risks">
+      <h2>Risks</h2>
+      <ul>
+        <li><b>Not audited yet.</b> The contracts are open source with tests, but no external audit has been done. Only deposit what you can afford to lose.</li>
+        <li><b>Stock Tokens are controlled by Robinhood.</b> Their contracts can pause transfers, block addresses, and burn from any address (admin burn). If the vault were blocked or a token paused, that token couldn't move until it's lifted.</li>
+        <li><b>Not for US persons.</b> Robinhood Stock Tokens may not be offered, sold or delivered in the United States or to US persons.</li>
+        <li><b>Market risk.</b> Prices can gap, especially over weekends; a large enough move liquidates part of your collateral.</li>
+        <li><b>Dependencies.</b> Robinhood Chain, Chainlink, the stablecoin issuer and your wallet are outside Kryonark's control.</li>
+      </ul>
     </section>
 
     <section id="site">
       <h2>This website</h2>
       <ul>
-        <li>kryonark.xyz never asks for a seed phrase, a private key or a signature, and no one from Kryonark will ever ask for them.</li>
-        <li>The engine on the home page is a preview: an example book with live collateral prices. It doesn't connect to a wallet or send transactions.</li>
+        <li>kryonark.xyz never asks for a seed phrase or a private key, and no one from Kryonark ever will.</li>
+        <li>Every transaction is prepared in your browser and signed in your wallet; check the contract address against the one below before signing.</li>
         <li>The site is static, served over HTTPS, and its full source is public at <a href="https://github.com/kryonark/kryonark" target="_blank" rel="noopener">github.com/kryonark/kryonark</a>.</li>
-        <li>The only official links are kryonark.xyz, github.com/kryonark and the <a href="https://www.npmjs.com/package/kryonark" target="_blank" rel="noopener">kryonark</a> npm package.</li>
+        <li>Vault: <code data-addr="vault">loading…</code></li>
       </ul>
     </section>
 
@@ -126,13 +130,12 @@
       <h2>Status and audits</h2>
       <table>
         <tr><th>Part</th><th>Status</th></tr>
-        <tr><td>Engine maths, intents, CLI</td><td><span class="status live">Live</span> open source, on npm</td></tr>
-        <tr><td>Site and engine preview</td><td><span class="status live">Live</span> kryonark.xyz</td></tr>
-        <tr><td>Vault contracts</td><td><span class="status next">Next</span> Robinhood Chain testnet</td></tr>
-        <tr><td>Cross-chain collateral</td><td><span class="status next">Next</span> LayerZero V2</td></tr>
-        <tr><td>Agent with session keys</td><td><span class="status later">Later</span> after an external audit</td></tr>
+        <tr><td>Vault and oracle contracts</td><td><span class="status live">Live</span> <span data-net="chain">Robinhood Chain</span>, open source with tests</td></tr>
+        <tr><td>Guardian agent</td><td><span class="status live">Live</span> status on the home page</td></tr>
+        <tr><td>Owner key to multisig + timelock</td><td><span class="status next">Next</span></td></tr>
+        <tr><td>External audit</td><td><span class="status next">Next</span> reports will be linked here</td></tr>
+        <tr><td>Collateral from other chains</td><td><span class="status later">Later</span></td></tr>
       </table>
-      <div class="callout">No contract holds user funds yet. Contracts will be audited before mainnet, and the reports will be linked here.</div>
     </section>
 
     <section id="report">
@@ -155,5 +158,6 @@
 </footer>
 
 <script src="assets/site.js" defer></script>
+<script src="assets/net-info.js" defer></script>
 </body>
 </html>

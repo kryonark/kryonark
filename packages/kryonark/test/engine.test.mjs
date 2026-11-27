@@ -1,29 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { health, bookHealth, status, topUpNeeded, exampleBook, plan } from "../src/index.mjs";
+import { health, borrowable, status, encodeAddress, words } from "../src/index.mjs";
 
-const prices = { SOL: 150, USDC: 1, BTC: 100000, ETH: 3000 };
-
-test("health is collateral x LT / position", () => {
-  assert.equal(health({ asset: "SOL", qty: 10, pos: 600 }, prices), 2);
-  assert.equal(status(2), "safe"); assert.equal(status(1.2), "guard"); assert.equal(status(0.9), "liquidatable");
-});
-test("example book starts at each row's target health", () => {
-  const book = exampleBook(prices);
-  for (const p of book) assert.ok(Math.abs(health(p, prices) - p.target) < 0.01, p.stock);
-  assert.ok(bookHealth(book, prices) > 1.5);
-});
-test("top-up restores the target health at the trigger price", () => {
-  const p = { asset: "SOL", qty: 10, pos: 600 };
-  const need = topUpNeeded(p, prices, 2, 135);           // SOL -10%
-  assert.ok(Math.abs(((10 * 135 + need) * 0.8) / 600 - 2) < 1e-9);
-});
-test("intents: protect (EN + ID), close, rotate, unknown", () => {
-  const book = exampleBook(prices);
-  const a = plan("Protect NVDA if SOL drops 10%", book, prices);
-  assert.equal(a.kind, "protect"); assert.equal(a.trigger, 135); assert.ok(a.usdc > 0);
-  assert.equal(plan("Lindungi AAPL kalau USDC turun 5%", book, prices).kind, "protect");
-  assert.equal(plan("Close TSLA", book, prices).kind, "close");
-  assert.equal(plan("Rotate yield to USDC", book, prices).kind, "rotate");
-  assert.equal(plan("buy dogecoin", book, prices).ok, false);
+const book = [{ amount: 1, usd: 3000, weight: 0.8 }, { amount: 10, usd: 388, weight: 0.7 }];
+test("health matches the docs example", () => { assert.equal(health(book, 3000).toFixed(2), "1.71"); });
+test("no debt is infinitely healthy", () => { assert.equal(health(book, 0), Infinity); });
+test("borrowable keeps 1.25", () => { assert.equal(Math.round(borrowable(book, 0)), 4093); assert.equal(health(book, borrowable(book, 0)).toFixed(4), "1.2500"); });
+test("status bands", () => { assert.equal(status(0.99), "liquidatable"); assert.equal(status(1.2), "guard"); assert.equal(status(1.5), "safe"); });
+test("abi helpers", () => {
+  assert.equal(encodeAddress("0x00000000000000000000000000000000000000Ab"), "0".repeat(62) + "ab");
+  assert.deepEqual(words("0x" + "0".repeat(63) + "5" + "0".repeat(63) + "1"), [5n, 1n]);
+  assert.throws(() => encodeAddress("0x12"));
 });

@@ -1,0 +1,8 @@
+{
+  "name": "kryonark-agent",
+  "private": true,
+  "type": "module",
+  "description": "Kryonark agent: pushes prices to KryoOracle and tops up guarded positions from their buffer.",
+  "scripts": { "start": "node agent.mjs" },
+  "dependencies": { "ethers": "6.13.4" }
+}
