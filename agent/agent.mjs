@@ -135,26 +135,28 @@ async function readPrices() {
 
 // ---------- accounts, discovered from vault events ----------
 const accounts = new Set();
-let scanned = FROM_BLOCK - 1;
+let scanned = FROM_BLOCK - 1, lastScan = 0;
+// one getLogs per window for every vault event (not one per event type), at most every 15 s: public RPCs rate-limit
 async function scan(head) {
+  if (Date.now() - lastScan < 15_000 && scanned > FROM_BLOCK) return;
   const STEP = 10_000;
   while (scanned < head) {
     const to = Math.min(head, scanned + STEP);
-    const [a, b, c, t] = await Promise.all([
-      vault.queryFilter(vault.filters.Deposited(), scanned + 1, to),
-      vault.queryFilter(vault.filters.Borrowed(), scanned + 1, to),
-      vault.queryFilter(vault.filters.GuardianSet(), scanned + 1, to),
-      vault.queryFilter(vault.filters.GuardTopUp(), scanned + 1, to),
-    ]);
-    for (const e of [...a, ...b, ...c]) accounts.add(ethers.getAddress(e.args.account));
-    for (const e of t) {
-      const blk = await e.getBlock();
-      status.actions.unshift({ at: blk.timestamp * 1000, account: e.args.account, eth: ethers.formatEther(e.args.amount),
-        before: Number(e.args.healthBefore) / 1e18, after: Number(e.args.healthAfter) / 1e18, tx: e.transactionHash });
+    const logs = await provider.getLogs({ address: VAULT, fromBlock: scanned + 1, toBlock: to });
+    for (const l of logs) {
+      let e; try { e = vault.interface.parseLog(l); } catch { continue; }
+      if (!e || !e.args || !("account" in e.args.toObject())) continue;
+      accounts.add(ethers.getAddress(e.args.account));
+      if (e.name === "GuardTopUp") {
+        const blk = await provider.getBlock(l.blockNumber);
+        status.actions.unshift({ at: blk.timestamp * 1000, account: e.args.account, eth: ethers.formatEther(e.args.amount),
+          before: Number(e.args.healthBefore) / 1e18, after: Number(e.args.healthAfter) / 1e18, tx: l.transactionHash });
+      }
     }
     status.actions = status.actions.slice(0, 100);
     scanned = to;
   }
+  lastScan = Date.now();
 }
 
 // ---------- the guard ----------
@@ -219,6 +221,6 @@ tick(); setInterval(tick, CHECK_MS);
 
 http.createServer((req, res) => {
   const send = (o) => { res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" }); res.end(JSON.stringify(o)); };
-  if (req.url.startsWith("/agent/api/status")) return send({ ...status, online: Date.now() - status.lastCheck < CHECK_MS * 6, now: Date.now() });
+  if (req.url.startsWith("/agent/api/status")) return send({ ...status, online: Date.now() - status.lastCheck < Math.max(CHECK_MS * 6, 60_000), now: Date.now() });
   res.writeHead(404); res.end();
 }).listen(PORT, "127.0.0.1", () => console.log(`status on 127.0.0.1:${PORT}`));

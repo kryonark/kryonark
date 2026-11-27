@@ -1,62 +1,62 @@
 # Kryonark
 
-**Trade stocks from any chain.** Kryonark is an omnichain collateral engine for tokenized stocks on Robinhood Chain: lock SOL, BTC or USDC on the chain where it already lives, open stock positions on Robinhood Chain in one signature, and let an AI agent top up collateral before a position can be liquidated.
+**Hold stocks. Keep your crypto.** Kryonark is a lending vault on Robinhood Chain: deposit ETH and Robinhood Stock Tokens as collateral, borrow dollars (USDG) against them without selling, and appoint a guardian agent that can top up your collateral from your own buffer and can never withdraw.
 
-[kryonark.xyz](https://kryonark.xyz) · [npm](https://www.npmjs.com/package/kryonark) · `npx kryonark`
+[kryonark.xyz](https://kryonark.xyz) · [docs](https://kryonark.xyz/docs) · [security](https://kryonark.xyz/security) · [npm](https://www.npmjs.com/package/kryonark) · `npx kryonark`
 
 ![Kryonark](web/assets/og.jpg)
+
+## Live contracts
+
+| | Robinhood Chain mainnet (4663) |
+|---|---|
+| KryonarkVault | [`0x857C224f9896c9A0F17f564D9C8Ba9Cf73802764`](https://robinhoodchain.blockscout.com/address/0x857C224f9896c9A0F17f564D9C8Ba9Cf73802764) |
+| KryoOracle | [`0xBbeAd3C159b4f722a059bB508F51a01944Db41c8`](https://robinhoodchain.blockscout.com/address/0xBbeAd3C159b4f722a059bB508F51a01944Db41c8) |
+| Debt asset | USDG `0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168` |
+| Collateral | ETH (80%), NVDA, AAPL, TSLA, AMZN, MSFT, GOOGL, META, ANT (70%) |
+| Prices | Chainlink for ETH and seven stocks; ANT and USDG pushed by the agent (each update capped at 25%) |
+| Source | Verified on [Sourcify](https://repo.sourcify.dev/4663/0x857C224f9896c9A0F17f564D9C8Ba9Cf73802764) (exact match) |
+
+The same code was run end to end on Robinhood Chain testnet (46630) before mainnet: deposit, borrow, a real agent top-up (health 1.28 → 1.50), repay and withdraw. All addresses also live at [`/assets/network.json`](https://kryonark.xyz/assets/network.json).
+
+## How it works
+
+- **Health** = Σ(collateral value × weight) ÷ debt. ETH counts 80%, Stock Tokens 70%. Borrowing or withdrawing must leave health at **1.25** or more; below **1.00** anyone can liquidate up to half the debt at a 5% bonus.
+- **The guardian agent** (an address you appoint with `setGuardian`, up to 90 days, revocable) can call exactly one function, `guardTopUp`, which moves your ETH buffer into your collateral while your health is below **1.30**. The Kryonark agent checks every account every few seconds and tops up to about 1.50.
+- **Lenders** supply USDG and own shares of the pool's cash plus outstanding debt; borrowers pay a simple yearly rate (8%) into it.
+- **Pause** stops new deposits and borrowing only. Repaying and withdrawing always work.
+- **Intents**: the site turns sentences (English or Indonesian) like `Borrow $50` or `Protect my account with 0.05 ETH` into the matching call for your wallet to sign.
 
 ## What is in this repo
 
 | Folder | What it is |
 |---|---|
-| [`web/`](web) | The site at kryonark.xyz. Static HTML, CSS and JS, no build step. A real-time 3D ice vault (three.js, bundled), live collateral prices, health factors and the intent box. |
-| [`studio/`](studio) | The owner panel at kryonark.xyz/studio: set the token CA (it then shows on the site), a buyback wallet (encrypted on the server), buyback and burn, supply burn, history. Node + ethers. |
-| [`packages/kryonark/`](packages/kryonark) | The engine as an npm package and CLI: health factors, the liquidation guard, plain-language intents, live prices. No dependencies. |
-| [`deploy/`](deploy) | nginx config and the deploy script for the VPS. |
-
-## The engine
-
-- **Health** = collateral value × 0.8 ÷ position value. Below 1.00 a position can be liquidated; below 1.30 the agent steps in.
-- **Collateral stays home.** SOL on Solana, USDC on Base, BTC on Bitcoin, ETH on Arbitrum; positions (NVDA, AAPL, AMZN, TSLA) live on Robinhood Chain.
-- **The agent** reads prices every block and moves USDC from the buffer you allowed, through a session key that can only add collateral.
-- **Intents in plain words**, English or Indonesian:
-  - `Protect NVDA if SOL drops 10%`
-  - `Lindungi AAPL kalau USDC turun 5%`
-  - `Close TSLA`
-  - `Rotate yield to USDC`
+| [`contracts/`](contracts) | `KryonarkVault`, `KryoOracle` (Chainlink feeds with a bounded pushed fallback) and `TestUSD` (testnet only). Foundry, 13 tests. |
+| [`agent/`](agent) | The guardian agent: pushes prices for assets without a Chainlink feed, watches every account, tops up guarded ones, serves `/agent/api/status`. Its key is created on the server and never leaves it. |
+| [`web/`](web) | kryonark.xyz. Static HTML/CSS/JS: the 3D ice vault, wallet connect (EIP-6963), the live vault, the intent box, docs and security pages. |
+| [`studio/`](studio) | Owner panel at /studio: deploy the contracts from the owner's browser wallet, token CA, buyback and burn. |
+| [`packages/kryonark/`](packages/kryonark) | `npx kryonark`: read the live vault, any account's health, the agent's heartbeat. No dependencies. |
+| [`deploy/`](deploy) | nginx config and the deploy script. |
 
 ```bash
-npx kryonark                                   # live example book
-npx kryonark plan "Protect NVDA if SOL drops 10%"
+npx kryonark                    # protocol totals, prices, the agent
+npx kryonark account 0xYourAddr # collateral, debt, health
 ```
 
-## Run locally
+## Develop
 
 ```bash
-# site
-cd web && python3 -m http.server 5820          # http://127.0.0.1:5820
-
-# studio (needs Node 18+)
-cd studio && npm install && PORT=5830 node server/server.mjs   # http://127.0.0.1:5830/studio
-# the studio key is generated on first start in studio/data/burn/secrets.json (never commit data/)
-
-# engine
-cd packages/kryonark && npm test && node bin/kryonark.mjs
+cd contracts && forge test                       # 13 tests
+cd packages/kryonark && npm test
+cd web && python3 -m http.server 5820            # the site, reads assets/network.json
 ```
 
-## Deploy
+## Risks
 
-`deploy/deploy.sh` syncs `web/` to `/var/www/kryonark/web` and runs the studio under pm2 on `127.0.0.1:5830`.
-nginx (`deploy/nginx-kryonark.conf`) serves the site and proxies `/studio` to the studio. TLS via Let's Encrypt.
-
-## Status
-
-The site's portfolio is an example with live collateral prices; the agent on the page is a simulation. Nothing here holds user funds. The studio's buyback and burn send real transactions from the owner's own wallet, capped per run and per day.
+Not audited yet; the owner key is a single wallet today and should move to a multisig with a timelock before the caps go up. Robinhood can pause, block or burn Stock Tokens. Stock Tokens may not be offered to US persons, so Kryonark isn't for US persons. Details: [kryonark.xyz/security](https://kryonark.xyz/security).
 
 ## Credits
 
-- 3D: [three.js](https://threejs.org) r160 (MIT), bundled in `web/assets/vendor/three`.
-- Network and token logos: [web3icons](https://github.com/0xa3k5/web3icons) (MIT). Stock logos: [Simple Icons](https://simpleicons.org) (CC0). Brand logos stay the property of their owners and are used only to name the networks and assets involved.
+three.js r160 (MIT) · ethers 6.13.4 (MIT) · forge-std (MIT/Apache-2.0) · network and token logos from [web3icons](https://github.com/0xa3k5/web3icons) (MIT) · stock logos from [Simple Icons](https://simpleicons.org) (CC0). Brand logos stay the property of their owners and are used only to name the assets involved.
 
 MIT
