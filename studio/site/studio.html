@@ -66,7 +66,7 @@ table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px
 <script>
 const $=(i)=>document.getElementById(i),esc=(s)=>String(s??"").replace(/[&<>"]/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 let KEY=sessionStorage.kryonarkKey||"",S=null;
-const api=async(p,o={})=>{const r=await fetch("/studio/api/owner"+p,{...o,headers:{"x-studio-key":KEY,"content-type":"application/json"}});const j=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(j.error||"Request failed"),{status:r.status});return j};
+const api=async(p,o={})=>{const r=await fetch("/studio/api/owner"+p,{...o,headers:{"x-studio-key":KEY,"content-type":"application/json"}});const j=await r.json().catch(()=>({}));if(r.status===401&&!$("app").hidden){sessionStorage.removeItem("kryonarkKey");location.reload()}if(!r.ok)throw Object.assign(new Error(j.error||"Request failed"),{status:r.status});return j};
 const say=(id,t,ok)=>{const m=$(id);m.textContent=t;m.className="msg "+(ok?"ok":"bad")};
 const usd=(v)=>v==null?"—":"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:2});
 const num=(v,d=4)=>v==null?"—":Number(v).toLocaleString("en-US",{maximumFractionDigits:d});
@@ -115,7 +115,7 @@ function presetUi(){const P=PRESETS[$("pnet").value];$("pbc").value=P.caps.borro
  $("pinfo").innerHTML=P.testnet?`Testnet: deploys a test dollar (tUSD) with a public faucet and lists ${P.stocks.map(s=>s[0]).join(", ")} (Robinhood's official test Stock Tokens). Prices are pushed by the agent. Get test ETH at <a href="${P.faucet}" target="_blank" rel="noopener">the faucet</a>.`
   :`<b style="color:var(--bad)">Mainnet, real funds.</b> Borrows USDG, lists ${P.stocks.map(s=>s[0]).join(", ")} with Chainlink feeds (ANT has no Chainlink feed yet, so the agent prices it from Robinhood, capped at 25% per update; USDG at $1). The contracts are not audited: keep the caps small, and move ownership to a multisig before raising them. Not for US persons.`}
 $("pnet").onchange=presetUi;presetUi();
-async function protoStatus(){try{const [n,a]=await Promise.all([api("/network").catch(()=>({})),fetch("/agent/api/status",{cache:"no-store"}).then(r=>r.json()).catch(()=>null)]);
+async function protoStatus(){if(!KEY||$("app").hidden)return;try{const [n,a]=await Promise.all([api("/network").catch(()=>({})),fetch("/agent/api/status",{cache:"no-store"}).then(r=>r.json()).catch(()=>null)]);
  if(a&&a.agent&&!$("prep").value)$("prep").value=a.agent;
  const net=n.network;$("pkv").innerHTML=[[net?net.chainName:"not deployed","network"],[net?net.vault:"—","vault"],[a?(a.online?"online":a.configured===false?"waiting for contracts":"offline"):"not running","agent"],[a?a.agent:"—","agent address (fund it with a little ETH for gas)"]].map(([b,s])=>`<div><b>${esc(b)}</b><span>${s}</span></div>`).join("")}catch{}}
 let ART=null;

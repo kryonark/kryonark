@@ -46,7 +46,9 @@ if (!RPC || !VAULT || !ORACLE) {
   }).listen(PORT, "127.0.0.1");
   await new Promise(() => {});
 }
-const provider = new ethers.JsonRpcProvider(RPC, undefined, { staticNetwork: true, batchMaxCount: 20 });
+// public RPCs rate-limit: every request times out after 15 s instead of hanging, and calls go in small batches
+const rpcReq = new ethers.FetchRequest(RPC); rpcReq.timeout = 15_000;
+const provider = new ethers.JsonRpcProvider(rpcReq, undefined, { staticNetwork: true, batchMaxCount: 10 });
 const wallet = new ethers.Wallet(E.AGENT_KEY, provider);
 delete process.env.AGENT_KEY;
 const vault = new ethers.Contract(VAULT, [
@@ -98,8 +100,7 @@ async function pushPrices() {
   const jump = await oracle.maxJumpBps();
   const now = Math.floor(Date.now() / 1000);
   for (const w of wanted) {
-    const f = await oracle.feeds(w.addr);
-    if (f.aggregator !== ethers.ZeroAddress) continue; // Chainlink handles it
+    if (await isChainlink(w.addr)) continue; // Chainlink handles it
     let v; try { v = await w.get(); } catch (e) { fail("price " + w.key)(e); continue; }
     const cur = await oracle.pushed(w.addr);
     let p = to8(v);
@@ -114,14 +115,22 @@ async function pushPrices() {
   }
   lastPush = Date.now();
 }
+const feedCache = new Map(); // asset -> { chainlink, at }
+async function isChainlink(a) {
+  const c = feedCache.get(a); if (c && Date.now() - c.at < 600_000) return c.chainlink;
+  const f = await oracle.feeds(a); const chainlink = f.aggregator !== ethers.ZeroAddress;
+  feedCache.set(a, { chainlink, at: Date.now() }); return chainlink;
+}
+let lastRead = 0;
 async function readPrices() {
+  if (Date.now() - lastRead < 30_000) return;
   const list = [["ETH", ethers.ZeroAddress], ...STOCKS.map((s) => [s.sym, s.addr]), ["USD", USD]];
   const out = {};
-  await Promise.all(list.map(async ([k, a]) => {
-    const [[px, at, ok], f] = await Promise.all([oracle.peek(a), oracle.feeds(a)]); // (Result.at is Array#at, so destructure)
-    out[k] = { usd: Number(px) / 1e8, at: Number(at) * 1000, ok, source: f.aggregator !== ethers.ZeroAddress ? "chainlink" : "kryonark-agent" };
-  }));
-  status.prices = out;
+  for (const [k, a] of list) {
+    const [[px, at, ok], chainlink] = await Promise.all([oracle.peek(a), isChainlink(a)]); // (Result.at is Array#at, so destructure)
+    out[k] = { usd: Number(px) / 1e8, at: Number(at) * 1000, ok, source: chainlink ? "chainlink" : "kryonark-agent" };
+  }
+  status.prices = out; lastRead = Date.now();
 }
 
 // ---------- accounts, discovered from vault events ----------
@@ -188,12 +197,14 @@ async function check() {
 // ---------- loops ----------
 const fail = (where) => (e) => { status.errors++; status.lastError = { at: Date.now(), where, msg: String(e?.shortMessage || e?.message || e).slice(0, 200) }; console.error(where, status.lastError.msg); };
 let busy = false;
+// a cycle can never hang the agent: each step is capped, and the next tick always runs
+const capped = (p, ms, what) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error(what + " timed out")), ms))]);
 async function tick() {
   if (busy) return; busy = true;
   try {
-    if (Date.now() - lastPush >= PRICE_MS) await pushPrices().catch(fail("prices"));
-    await readPrices().catch(fail("read prices"));
-    await check();
+    if (Date.now() - lastPush >= PRICE_MS) await capped(pushPrices(), 90_000, "price push").catch(fail("prices"));
+    await capped(readPrices(), 30_000, "read prices").catch(fail("read prices"));
+    await capped(check(), 60_000, "health check");
   } catch (e) { fail("check")(e); }
   busy = false;
 }
