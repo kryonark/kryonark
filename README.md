@@ -23,7 +23,7 @@ The same code was run end to end on Robinhood Chain testnet (46630) before mainn
 
 - **Health** = Σ(collateral value × weight) ÷ debt. ETH counts 80%, Stock Tokens 70%. Borrowing or withdrawing must leave health at **1.25** or more; below **1.00** anyone can liquidate up to half the debt at a 5% bonus.
 - **The guardian agent** (an address you appoint with `setGuardian`, up to 90 days, revocable) can call exactly one function, `guardTopUp`, which moves your ETH buffer into your collateral while your health is below **1.30**. The Kryonark agent checks every account every few seconds and tops up to about 1.50.
-- **Lenders** supply USDG and own shares of the pool's cash plus outstanding debt; borrowers pay a simple yearly rate (8%) into it.
+- **Lenders** supply USDG and own shares of the pool's cash plus outstanding debt; borrowers pay 8% a year into it, compounding whenever the vault is touched (about 8.3% effective).
 - **Pause** stops new deposits and borrowing only. Repaying and withdrawing always work.
 - **Intents**: the site turns sentences (English or Indonesian) like `Borrow $50` or `Protect my account with 0.05 ETH` into the matching call for your wallet to sign.
 
@@ -31,7 +31,7 @@ The same code was run end to end on Robinhood Chain testnet (46630) before mainn
 
 | Folder | What it is |
 |---|---|
-| [`contracts/`](contracts) | `KryonarkVault`, `KryoOracle` (Chainlink feeds with a bounded pushed fallback) and `TestUSD` (testnet only). Foundry, 13 tests. |
+| [`contracts/`](contracts) | `KryonarkVault`, `KryoOracle` (Chainlink feeds with a bounded pushed fallback) and `TestUSD` (testnet only). Foundry: unit, fuzz and invariant tests. |
 | [`agent/`](agent) | The guardian agent: pushes prices for assets without a Chainlink feed, watches every account, tops up guarded ones, serves `/agent/api/status`. Its key is created on the server and never leaves it. |
 | [`web/`](web) | kryonark.xyz. Static HTML/CSS/JS: the 3D ice vault, wallet connect (EIP-6963), the live vault, the intent box, docs and security pages. |
 | [`studio/`](studio) | Owner panel at /studio: deploy the contracts from the owner's browser wallet, token CA, buyback and burn. |
@@ -46,14 +46,14 @@ npx kryonark account 0xYourAddr # collateral, debt, health
 ## Develop
 
 ```bash
-cd contracts && forge test                       # 13 tests
+cd contracts && forge test                       # unit, fuzz and invariant tests
 cd packages/kryonark && npm test
 cd web && python3 -m http.server 5820            # the site, reads assets/network.json
 ```
 
 ## Risks
 
-Not audited yet; the owner key is a single wallet today and should move to a multisig with a timelock before the caps go up. Robinhood can pause, block or burn Stock Tokens. Stock Tokens may not be offered to US persons, so Kryonark isn't for US persons. Details: [kryonark.xyz/security](https://kryonark.xyz/security).
+No external audit yet; the team's [internal security review](docs/review.md) lists what was tested, found and fixed. The owner key is a single wallet today and should move to a multisig with a timelock before the caps go up. Robinhood can pause, block or burn Stock Tokens. Stock Tokens may not be offered to US persons, so Kryonark isn't for US persons. Details: [kryonark.xyz/security](https://kryonark.xyz/security).
 
 ## Credits
 

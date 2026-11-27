@@ -64,11 +64,18 @@ async function boot() {
 function foot() {
   const parts = [];
   if (NET.testnet) parts.push(`Testnet: <button type="button" data-act="faucet">get 1,000 ${esc(NET.usd.symbol)}</button> · <a href="${NET.faucet}" target="_blank" rel="noopener">test ETH and stock tokens</a>`);
-  parts.push(`Prices: ${NET.testnet ? "Coinbase and Robinhood, pushed by the agent" : "Chainlink"} · <a href="${NET.explorer}/address/${NET.vault}" target="_blank" rel="noopener">vault contract</a>`);
+  parts.push(`Prices: ${NET.testnet ? "Coinbase and Robinhood, pushed by the agent" : "Chainlink; ANT pushed by the agent within a 20%-a-day band; USDG fixed at $1.00"} · <a href="${NET.explorer}/address/${NET.vault}" target="_blank" rel="noopener">vault contract</a>`);
   $("#act-foot").innerHTML = parts.join("<br>");
 }
 
 // ------------------------------------------------------------------ chain reads
+// A feed is Chainlink unless it is one of Kryonark's own pushed feeds (KryoPushFeed has a reporter()).
+const feedKinds = new Map();
+async function isChainlinkFeed(feed) {
+  if (feed === ZERO) return false;
+  if (!feedKinds.has(feed)) feedKinds.set(feed, new E.Contract(feed, ["function reporter() view returns (address)"], rp).reporter().then(() => false, () => true));
+  return feedKinds.get(feed);
+}
 const unit = (x, d) => +E.formatUnits(x, d);
 let seq = 0;
 async function refresh() {
@@ -82,7 +89,7 @@ async function refresh() {
     S.buf = +E.formatEther(buf); S.paused = paused; S.shares = shares; S.cap = unit(cap, NET.usd.decimals);
     S.assets = await Promise.all(NET.collateral.map(async (a) => {
       const [m, px, f] = await Promise.all([vaultR.assets(a.address), oracleR.peek(a.address), oracleR.feeds(a.address)]);
-      return { ...a, lt: Number(m.ltBps) / 1e4, cap: unit(m.cap, a.decimals), total: unit(m.total, a.decimals), usd: Number(px[0]) / 1e8, at: Number(px[1]) * 1000, fresh: px[2], chainlink: f[0] !== ZERO };
+      return { ...a, lt: Number(m.ltBps) / 1e4, cap: unit(m.cap, a.decimals), total: unit(m.total, a.decimals), usd: Number(px[0]) / 1e8, at: Number(px[1]) * 1000, fresh: px[2], chainlink: await isChainlinkFeed(f[0]) };
     }));
     S.ok = true;
     if (ME) { const who = ME.address, me = await readMe(who); if (id !== seq || !ME || ME.address !== who) return; Object.assign(ME, me); }

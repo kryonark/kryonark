@@ -123,7 +123,9 @@ async function pushPrices() {
   const jump = await oracle.maxJumpBps();
   const now = Math.floor(Date.now() / 1000);
   for (const w of wanted) {
-    if (await isChainlink(w.addr)) continue; // Chainlink handles it
+    const kind = await feedKind(w.addr);
+    if (kind.type === "push") { await pushToFeed(w, kind.feed).catch(fail("feed " + w.key)); continue; }
+    if (kind.type !== "none") continue; // Chainlink, or a fixed feed: nothing to push
     let v; try { v = await w.get(); } catch (e) { fail("price " + w.key)(e); continue; }
     const cur = await oracle.pushed(w.addr);
     let p = to8(v);
@@ -139,10 +141,39 @@ async function pushPrices() {
   lastPush = Date.now();
 }
 const feedCache = new Map(); // asset -> { chainlink, at }
-async function isChainlink(a) {
-  const c = feedCache.get(a); if (c && Date.now() - c.at < 600_000) return c.chainlink;
-  const f = await oracle.feeds(a); const chainlink = f.aggregator !== ethers.ZeroAddress;
-  feedCache.set(a, { chainlink, at: Date.now() }); return chainlink;
+// none: the oracle uses prices pushed into it; chainlink/fixed: nothing to do; push: our own KryoPushFeed
+const PUSH_FEED_ABI = ["function reporter() view returns (address)", "function push(uint256)", "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
+  "function maxJumpBps() view returns (uint256)", "function dailyBandBps() view returns (uint256)", "function anchor() view returns (uint128)", "function anchorAt() view returns (uint64)", "function description() view returns (string)"];
+async function feedKind(a) {
+  const c = feedCache.get(a); if (c && Date.now() - c.at < 600_000) return c.kind;
+  const f = await oracle.feeds(a);
+  let kind = { type: "none" };
+  if (f.aggregator !== ethers.ZeroAddress) {
+    const feed = new ethers.Contract(f.aggregator, PUSH_FEED_ABI, wallet);
+    let rep = null; try { rep = await feed.reporter(); } catch {}
+    if (rep && rep.toLowerCase() === wallet.address.toLowerCase()) kind = { type: "push", feed };
+    else { let d = ""; try { d = await feed.description(); } catch {} kind = { type: /fixed/i.test(d) ? "fixed" : "chainlink" }; }
+  }
+  feedCache.set(a, { kind, at: Date.now() }); return kind;
+}
+const sourceOf = async (a) => ({ none: "kryonark-agent", push: "kryonark-agent", fixed: "fixed", chainlink: "chainlink" })[(await feedKind(a)).type];
+
+// Our own feed refuses moves beyond its per-push and per-day bands. Clamp to them; a real move beyond the day's band
+// leaves the price to go stale (borrowing on it stops) until the owner checks and calls force().
+async function pushToFeed(w, feed) {
+  const v = await w.get();
+  const [[, cur, , at], jump, band, anchor, anchorAt] = await Promise.all([feed.latestRoundData(), feed.maxJumpBps(), feed.dailyBandBps(), feed.anchor(), feed.anchorAt()]);
+  const prev = BigInt(cur), now = BigInt(Math.floor(Date.now() / 1000));
+  const anc = now >= BigInt(anchorAt) + 86400n ? prev : BigInt(anchor);
+  let p = to8(v);
+  const j = (prev * jump) / 10000n, b = (anc * band) / 10000n;
+  const lo = [prev - j, anc - b].reduce((x, y) => (x > y ? x : y)), hi = [prev + j, anc + b].reduce((x, y) => (x < y ? x : y));
+  if (p < lo) p = lo; if (p > hi) p = hi;
+  if (p !== to8(v)) console.log(`${w.key} quote ${v} is outside the feed's bands, pushing ${Number(p) / 1e8}`);
+  const moved = (p > prev ? p - prev : prev - p) * 1000n > prev;
+  if (!moved && Number(now) - Number(at) < 600) return;
+  const tx = await feed.push(p); await tx.wait();
+  status.lastPricePush = { at: Date.now(), tx: tx.hash, assets: 1, feed: await feed.getAddress() };
 }
 let lastRead = 0;
 async function readPrices() {
@@ -150,8 +181,8 @@ async function readPrices() {
   const list = [["ETH", ethers.ZeroAddress], ...STOCKS.map((s) => [s.sym, s.addr]), ["USD", USD]];
   const out = {};
   for (const [k, a] of list) {
-    const [[px, at, ok], chainlink] = await Promise.all([oracle.peek(a), isChainlink(a)]); // (Result.at is Array#at, so destructure)
-    out[k] = { usd: Number(px) / 1e8, at: Number(at) * 1000, ok, source: chainlink ? "chainlink" : "kryonark-agent" };
+    const [[px, at, ok], source] = await Promise.all([oracle.peek(a), sourceOf(a)]); // (Result.at is Array#at, so destructure)
+    out[k] = { usd: Number(px) / 1e8, at: Number(at) * 1000, ok, source };
   }
   status.prices = out; lastRead = Date.now();
 }

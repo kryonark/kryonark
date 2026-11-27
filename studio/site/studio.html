@@ -41,6 +41,11 @@ table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px
     <p class="note" id="pinfo"></p>
     <div class="row" style="margin-top:14px"><div style="flex:0"><button class="btn sig" type="button" id="pgo">Connect wallet and deploy</button></div><div style="flex:0"><button class="btn ghost" type="button" id="preset">Forget a half-finished deploy</button></div></div>
     <div class="scroll"><table id="plog"></table></div><div class="msg" id="pm"></div></section>
+  <section class="card" id="harden"><h2>00b · Price hardening</h2><p class="sub">From the internal review (<a href="https://github.com/kryonark/kryonark/blob/main/docs/review.md" target="_blank" rel="noopener">docs/review.md</a>). Signed in your owner wallet, about 12 small transactions, resumable:</p>
+    <ul class="note" style="margin:0 0 10px 18px;line-height:1.7"><li>stock feeds accept prices up to 4 days old, so weekends and holidays don't freeze the guardian (Chainlink stock feeds pause when markets close; ETH stays at 25 h);</li>
+    <li>USDG reads a fixed $1.00 feed that no key can move;</li><li>ANT reads a new feed the agent pushes, limited to 10% per update and 20% per day (the old path allowed 25% per update, compounding);</li><li>the old pushed-price path is switched off (reporter set to none).</li></ul>
+    <div class="row" style="margin-top:6px"><div style="flex:0"><button class="btn sig" type="button" id="hgo">Connect wallet and apply</button></div></div>
+    <div class="scroll"><table id="hlog"></table></div><div class="msg" id="hm"></div></section>
   <section class="card"><h2>01 · Token</h2><p class="sub">The CA shows on kryonark.xyz with a copy button and a Buy on Pons link as soon as you save it. Leave it empty to hide it.</p>
     <form id="tf"><div class="row"><div style="flex:3"><label for="ca">Contract address</label><input id="ca" placeholder="0x…" spellcheck="false"></div><div><label for="sym">Ticker</label><input id="sym" maxlength="13"></div></div>
     <div style="margin-top:14px"><button class="btn">Save token</button></div><div class="msg" id="tm"></div></form></section>
@@ -113,7 +118,7 @@ const PRESETS={
 const plog=[];const pl=(t,h,url)=>{plog.push([new Date().toISOString().slice(11,19),t,h?`<a href="${url}/tx/${esc(h)}" target="_blank" rel="noopener">${esc(h.slice(0,12))}…</a>`:""]);$("plog").innerHTML=plog.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${r[2]}</td></tr>`).join("")};
 function presetUi(){const P=PRESETS[$("pnet").value];$("pbc").value=P.caps.borrow;$("pec").value=P.caps.eth;$("psc").value=P.caps.stock;
  $("pinfo").innerHTML=P.testnet?`Testnet: deploys a test dollar (tUSD) with a public faucet and lists ${P.stocks.map(s=>s[0]).join(", ")} (Robinhood's official test Stock Tokens). Prices are pushed by the agent. Get test ETH at <a href="${P.faucet}" target="_blank" rel="noopener">the faucet</a>.`
-  :`<b style="color:var(--bad)">Mainnet, real funds.</b> Borrows USDG, lists ${P.stocks.map(s=>s[0]).join(", ")} with Chainlink feeds (ANT has no Chainlink feed yet, so the agent prices it from Robinhood, capped at 25% per update; USDG at $1). The contracts are not audited: keep the caps small, and move ownership to a multisig before raising them. Not for US persons.`}
+  :`<b style="color:var(--bad)">Mainnet, real funds.</b> Borrows USDG, lists ${P.stocks.map(s=>s[0]).join(", ")} with Chainlink feeds (stock feeds accept prices up to 4 days old for weekends; ANT has no Chainlink feed yet: after deploying, run 00b to give it a bounded agent feed and USDG a fixed $1 feed). The contracts are not audited: keep the caps small, and move ownership to a multisig before raising them. Not for US persons.`}
 $("pnet").onchange=presetUi;presetUi();
 async function protoStatus(){if(!KEY||$("app").hidden)return;try{const [n,a]=await Promise.all([api("/network").catch(()=>({})),fetch("/agent/api/status",{cache:"no-store"}).then(r=>r.json()).catch(()=>null)]);
  if(a&&a.agent&&!$("prep").value)$("prep").value=a.agent;
@@ -140,12 +145,37 @@ $("pgo").onclick=async()=>{const key=$("pnet").value,P=PRESETS[key],rep=$("prep"
   st.done||=[];const once=async(k,label,f)=>{if(st.done.includes(k))return;await wait(label,f());st.done.push(k);save()};
   await once("eth","list ETH (80%)",()=>V.listAsset(Z,8000,BigInt(Math.round(+$("pec").value||0))*10n**18n));
   for(const [sym,,addr] of P.stocks)await once("s:"+sym,`list ${sym} (70%)`,()=>V.listAsset(addr,7000,BigInt(Math.round(+$("psc").value||0))*10n**18n));
-  for(const [sym,agg] of Object.entries(P.feeds)){const asset=sym==="ETH"?Z:P.stocks.find(x=>x[0]===sym)[2];await once("f:"+sym,`Chainlink feed ${sym}`,()=>O.setFeed(asset,agg,90000))}
+  for(const [sym,agg] of Object.entries(P.feeds)){const asset=sym==="ETH"?Z:P.stocks.find(x=>x[0]===sym)[2];await once("f:"+sym,`Chainlink feed ${sym}`,()=>O.setFeed(asset,agg,sym==="ETH"?90000:345600))}
   const apr=Math.round((+$("papr").value||8)*100);if(apr!==800)await once("apr",`borrow rate ${apr/100}%`,()=>V.setParams(apr,bc));
   const net={network:P.network,testnet:P.testnet,chainId:P.chainId,chainName:P.chainName,rpc:P.rpc,explorer:P.explorer,faucet:P.faucet,blockMs:P.blockMs,deployBlock:st.block||0,vault:st.vault,oracle:st.oracle,usd,
    collateral:[{symbol:"ETH",name:"Ether",address:Z,decimals:18,logo:"eth"},...P.stocks.map(([sym,name,address])=>({symbol:sym,name,address,decimals:18,logo:sym.toLowerCase()}))]};
   await api("/network",{method:"POST",body:JSON.stringify(net)});pl("site and agent switched to the new contracts");
   localStorage.removeItem("kryoDeploy");say("pm",`Done. Vault ${st.vault}. The agent restarts within seconds; fund its address with a little ETH for gas.`,true);protoStatus();
  }catch(x){say("pm",(x.shortMessage||x.message)+" — run it again to continue from where it stopped.",false)}finally{b.disabled=false;b.textContent="Connect wallet and deploy"}};
+
+// ---------------------------------------------------------------- 00b · price hardening (signed in the owner's browser wallet)
+const hlog=[];const hl=(t,h,url)=>{hlog.push([new Date().toISOString().slice(11,19),t,h?`<a href="${url}/tx/${esc(h)}" target="_blank" rel="noopener">${esc(h.slice(0,12))}…</a>`:""]);$("hlog").innerHTML=hlog.map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td><td>${r[2]}</td></tr>`).join("")};
+$("hgo").onclick=async()=>{const b=$("hgo");
+ try{if(!window.ethers)throw new Error("ethers didn't load; reload the page.");
+  const net=(await api("/network")).network;if(!net||!net.oracle)throw new Error("No deployed contracts yet.");
+  const P=PRESETS[net.network];b.disabled=true;b.textContent="Working…";ART||=await (await fetch("/studio/artifacts.json")).json();
+  const s=await wallet(P),me=await s.getAddress();hl(`wallet ${me} on ${P.chainName}`);
+  const O=new ethers.Contract(net.oracle,ART.KryoOracle.abi,s);
+  if((await O.owner()).toLowerCase()!==me.toLowerCase())throw new Error("This wallet is not the oracle owner.");
+  const agentAddr=await O.reporter().then(r=>r!==Z?r:null);const st=JSON.parse(localStorage.getItem("kryoHarden")||"{}");const save=()=>localStorage.setItem("kryoHarden",JSON.stringify(st));
+  if(st.oracle!==net.oracle){for(const k in st)delete st[k];st.oracle=net.oracle;st.agent=agentAddr;save()}
+  const wait=async(label,txp)=>{const tx=await txp;hl(label+": sent",tx.hash,P.explorer);await tx.wait();hl(label+": confirmed",tx.hash,P.explorer)};
+  const deploy=async(name,args)=>{const c=await new ethers.ContractFactory(ART[name].abi,ART[name].bytecode,s).deploy(...args);hl(`${name}: sent`,c.deploymentTransaction().hash,P.explorer);await c.deploymentTransaction().wait();const a=await c.getAddress();hl(`${name}: ${a}`);return a};
+  st.done||=[];const once=async(k,label,f)=>{if(st.done.includes(k))return;await wait(label,f());st.done.push(k);save()};
+  const ant=net.collateral.find(c=>c.symbol==="ANT");
+  if(!st.fixed){st.fixed=await deploy("FixedFeed",[100000000n,"USDG / USD fixed 1.00"]);save()}
+  if(ant&&!st.push){if(!st.agent)throw new Error("The oracle has no reporter to hand the ANT feed to.");const [px]=await O.peek(ant.address);if(px===0n)throw new Error("ANT has no price yet.");
+   st.push=await deploy("KryoPushFeed",["ANT / USD (Kryonark agent, 10% per update, 20% per day)",st.agent,px,1000n,2000n]);save()}
+  for(const c of net.collateral){if(c.address===Z||c.symbol==="ANT")continue;const [agg]=await O.feeds(c.address);if(agg===Z)continue;await once("age:"+c.symbol,`${c.symbol}: accept Chainlink prices up to 4 days old`,()=>O.setFeed(c.address,agg,345600))}
+  await once("usd","USDG: fixed $1.00 feed",()=>O.setFeed(net.usd.address,st.fixed,3600));
+  if(ant)await once("ant","ANT: bounded agent feed",()=>O.setFeed(ant.address,st.push,3600));
+  await once("rep","old pushed-price path off",()=>O.setReporter(Z));
+  localStorage.removeItem("kryoHarden");say("hm","Done. The agent picks up the ANT feed within 10 minutes.",true);
+ }catch(x){say("hm",(x.shortMessage||x.message)+" — run it again to continue from where it stopped.",false)}finally{b.disabled=false;b.textContent="Connect wallet and apply"}};
 const _enter=enter;enter=async()=>{await _enter();protoStatus();setInterval(protoStatus,15000)};if(KEY){protoStatus();setInterval(protoStatus,15000)}
 </script></body></html>
